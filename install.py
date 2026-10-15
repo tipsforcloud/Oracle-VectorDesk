@@ -41,7 +41,7 @@ def ask_input(prompt: str, default: str = "") -> str:
 
 
 def check_python_dependencies():
-    print("[1/5] Verificando dependencias de Python...")
+    print("[1/6] Verificando dependencias de Python...")
     required = ["oracledb", "dotenv", "fastapi", "uvicorn", "pydantic", "requests"]
     missing = []
     for pkg in required:
@@ -62,24 +62,49 @@ def check_python_dependencies():
 
 
 def setup_database_config():
-    print("\n[2/5] Configuración de Conexión a Oracle Database 26ai...")
-    print("Ingresa los datos de conexión a tu Base de Datos en OCI (Easy Connect):")
+    print("\n[2/6] Configuración de Conexión a Oracle Database 26ai...")
+    print("  Selecciona la modalidad de tu Base de Datos en OCI:")
+    print("  1) Base Database Service en VM (Conexión TCP directa por VCN) [Por defecto]")
+    print("  2) Autonomous AI Database Serverless (mTLS con Wallet zip/directorio)")
 
-    host = ask_input("  Host / FQDN del DBSystem", "dbhost9185.sub04051019361.sarizavcn.oraclevcn.com")
-    port = ask_input("  Puerto del Listener", "1521")
-    service = ask_input("  Nombre del Servicio / PDB", "pdblab1.sub04051019361.sarizavcn.oraclevcn.com")
-    user = ask_input("  Usuario de la Base de Datos", "app_support")
+    db_flavor = input("  Modalidad [1/2, defecto 1]: ").strip()
+    wallet_dir = None
+    wallet_password = None
+
+    if db_flavor == "2":
+        print("\n  -- Conexión a Oracle Autonomous AI Database (Serverless) --")
+        wallet_dir = ask_input("  Ruta al directorio de la Wallet (descomprimida)", "/opt/oracle/wallet")
+        wallet_pwd_input = getpass.getpass("  Contraseña de la Wallet (opcional, Enter para omitir): ").strip()
+        wallet_password = wallet_pwd_input if wallet_pwd_input else None
+        full_dsn = ask_input("  Nombre del TNS Alias / Servicio", "vectordb_low")
+        user = ask_input("  Usuario de la Base de Datos", "ADMIN")
+    else:
+        print("\n  -- Conexión a Oracle Base Database Service (VM) --")
+        host = ask_input("  Host / FQDN del DBSystem", "dbhost9185.sub04051019361.sarizavcn.oraclevcn.com")
+        port = ask_input("  Puerto del Listener", "1521")
+        service = ask_input("  Nombre del Servicio / PDB", "pdblab1.sub04051019361.sarizavcn.oraclevcn.com")
+        user = ask_input("  Usuario de la Base de Datos", "app_support")
+        full_dsn = f"{host}:{port}/{service}"
     
     password = getpass.getpass("  Contraseña del Usuario DB: ")
     while not password:
         password = getpass.getpass("  La contraseña no puede estar vacía. Reingresa: ")
 
-    full_dsn = f"{host}:{port}/{service}"
     print(f"\n  Validando conectividad con Oracle 26ai en: {full_dsn}...")
 
     try:
         import oracledb
-        conn = oracledb.connect(user=user, password=password, dsn=full_dsn)
+        connect_kwargs = {
+            "user": user,
+            "password": password,
+            "dsn": full_dsn
+        }
+        if wallet_dir:
+            connect_kwargs["wallet_location"] = wallet_dir
+            if wallet_password:
+                connect_kwargs["wallet_password"] = wallet_password
+
+        conn = oracledb.connect(**connect_kwargs)
         with conn.cursor() as cur:
             cur.execute("SELECT banner_full FROM v$version WHERE ROWNUM = 1")
             version = cur.fetchone()[0]
@@ -92,24 +117,38 @@ def setup_database_config():
             sys.exit(1)
 
     # Guardar en archivo .env
-    env_content = f"""# Configuración Generada por Setup Wizard
-DB_USER={user}
-DB_PASSWORD={password}
-DB_DSN={full_dsn}
+    env_lines = [
+        "# Configuración Generada por Setup Wizard",
+        f"DB_USER={user}",
+        f"DB_PASSWORD={password}",
+        f"DB_DSN={full_dsn}"
+    ]
+    if wallet_dir:
+        env_lines.append(f"WALLET_DIR={wallet_dir}")
+        if wallet_password:
+            env_lines.append(f"WALLET_PASSWORD={wallet_password}")
 
-# Inferencia en CPU (Ollama)
-OLLAMA_URL=http://localhost:11434/api/generate
-OLLAMA_MODEL=qwen2.5:7b-instruct-q4_K_M
-"""
+    env_lines.extend([
+        "",
+        "# Inferencia en CPU (Ollama)",
+        "OLLAMA_URL=http://localhost:11434/api/generate",
+        "OLLAMA_MODEL=qwen2.5:7b-instruct-q4_K_M",
+        "",
+        "# Modelo de Embeddings y Umbral",
+        "EMBEDDING_MODEL_NAME=intfloat/multilingual-e5-base",
+        "EMBEDDING_DIM=768",
+        "SIMILARITY_THRESHOLD=0.35"
+    ])
+
     with open(str(BASE_DIR / ".env"), "w", encoding="utf-8") as f:
-        f.write(env_content)
+        f.write("\n".join(env_lines) + "\n")
     print("  [✓] Archivo de entorno '.env' creado y configurado correctamente.")
 
-    return user, password, full_dsn
+    return user, password, full_dsn, wallet_dir, wallet_password
 
 
-def execute_sql_initialization(user, password, dsn):
-    print("\n[3/5] Creación de Estructuras Vectoriales en Oracle 26ai...")
+def execute_sql_initialization(user, password, dsn, wallet_dir=None, wallet_password=None):
+    print("\n[3/6] Creación de Estructuras Vectoriales en Oracle 26ai...")
     run_ddl = input("  ¿Deseas verificar/crear las tablas de KNOWLEDGE_BASE y auditoría en la BD? [S/n]: ").strip().lower()
     if run_ddl != 'n':
         sql_file = BASE_DIR / "sql" / "init_db.sql"
@@ -119,7 +158,17 @@ def execute_sql_initialization(user, password, dsn):
 
         try:
             import oracledb
-            conn = oracledb.connect(user=user, password=password, dsn=dsn)
+            connect_kwargs = {
+                "user": user,
+                "password": password,
+                "dsn": dsn
+            }
+            if wallet_dir:
+                connect_kwargs["wallet_location"] = wallet_dir
+                if wallet_password:
+                    connect_kwargs["wallet_password"] = wallet_password
+
+            conn = oracledb.connect(**connect_kwargs)
             with open(str(sql_file), "r", encoding="utf-8") as f:
                 content = f.read()
 
@@ -142,7 +191,7 @@ def execute_sql_initialization(user, password, dsn):
 
 
 def check_ollama_service():
-    print("\n[4/5] Verificando Motor LLM en CPU (Ollama)...")
+    print("\n[4/6] Verificando Motor LLM en CPU (Ollama)...")
     try:
         import requests
         resp = requests.get("http://localhost:11434/api/tags", timeout=5)
@@ -160,7 +209,7 @@ def check_ollama_service():
 
 
 def setup_knowledge_base():
-    print("\n[5/5] Ingesta de Documentos a la Base de Conocimiento...")
+    print("\n[5/6] Ingesta de Documentos a la Base de Conocimiento...")
     print("  Selecciona cómo deseas inicializar el conocimiento:")
     print("  1) Generar y cargar los 10 documentos PDF de demostración (Recomendado para pruebas iniciales).")
     print("  2) Ingestar mis propios documentos PDF colocados en 'data/documents/'.")
@@ -204,8 +253,8 @@ def configure_systemd_service():
 def main():
     print_banner()
     check_python_dependencies()
-    user, password, dsn = setup_database_config()
-    execute_sql_initialization(user, password, dsn)
+    user, password, dsn, wallet_dir, wallet_password = setup_database_config()
+    execute_sql_initialization(user, password, dsn, wallet_dir, wallet_password)
     check_ollama_service()
     setup_knowledge_base()
     service_active = configure_systemd_service()
