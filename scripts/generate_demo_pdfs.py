@@ -1,11 +1,18 @@
 """
 Generador de Documentos PDF Corporativos de Demostración
 Genera 10 PDFs realistas de soporte de TI y políticas corporativas
-para el Agente de Soporte RAG con Oracle Database 26ai.
+en data/demo_docs/ para el Agente de Soporte RAG con Oracle Database 26ai.
 """
 
 import os
 import sys
+from pathlib import Path
+
+# Agregar raíz al sys.path
+BASE_DIR = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(BASE_DIR))
+
+from src.config import DEMO_DOCS_DIR
 
 try:
     from reportlab.lib.pagesizes import letter
@@ -13,10 +20,10 @@ try:
     from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
     from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, HRFlowable
 except ImportError:
-    print("ReportLab no está instalado. Instálalo ejecutando: pip install reportlab")
+    print("ReportLab no está instalado. Instálalo ejecutando: pip3 install --break-system-packages reportlab")
     sys.exit(1)
 
-OUTPUT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "docs_demo")
+OUTPUT_DIR = str(DEMO_DOCS_DIR)
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 DOCUMENTS_DATA = [
@@ -293,14 +300,17 @@ def create_pdf(doc_info):
     story.append(Paragraph("Documento de Uso Interno Confidencial - Prohibida su reproducción sin autorización de TI InnovaCorp", meta_style))
 
     doc.build(story)
-    print(f"Generado exitosamente: {doc_info['filename']}")
+    print(f"  [✓] Generado: {doc_info['filename']}")
 
 
 def main():
-    print(f"Generando 10 documentos PDF corporativos de demostración en:\n{OUTPUT_DIR}\n")
+    print("================================================================================")
+    print(" GENERADOR DE DOCUMENTOS PDF DE DEMOSTRACIÓN (ORACLE-VECTORDESK) ")
+    print("================================================================================")
+    print(f"Directorio de destino: {OUTPUT_DIR}\n")
     for doc in DOCUMENTS_DATA:
         create_pdf(doc)
-    print("\n¡Todos los 10 PDFs fueron generados con éxito!")
+    print("\n¡Los 10 documentos PDF fueron generados con éxito!")
 
 
 if __name__ == "__main__":

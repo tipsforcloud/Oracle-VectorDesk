@@ -19,7 +19,8 @@
 * **100% Inferencia en CPU (Sin GPUs):** Ejecuta **Qwen 2.5 7B Instruct** cuantizado (Q4_K_M) sobre procesadores AMD EPYC en instancias `VM.Standard.E6.Flex`, manteniendo costos fijos y predecibles.
 * **Tolerancia Cero a la Alucinación:** Incorpora un umbral estricto de similitud semántica (`similarity < 0.35`). Si la consulta del usuario no tiene respaldo documental comprobado en Oracle, el agente **no inventa** y escala automáticamente el caso a soporte humano.
 * **Auditoría Empresarial Nativa:** Cada interacción, latencia en milisegundos, nivel de confianza y contexto recuperado se persiste automáticamente en la tabla `AGENT_TICKETS_LOG`.
-* **Dataset Demo Completo:** Incluye un generador de 10 documentos PDF corporativos y una suite automatizada de benchmark con 20 preguntas reales para evaluar precisión y tiempos de respuesta.
+* **Wizard Interactivo de Instalación:** Incluye `install.py` para validar conectividad con el DBSystem, configurar variables, crear DDLs vectoriales e ingestar datos en minutos.
+* **Dataset Demo Completo:** Generador de 10 documentos PDF corporativos y suite automatizada de benchmark con 20 preguntas reales para evaluar precisión y tiempos de respuesta.
 
 ---
 
@@ -63,20 +64,12 @@ flowchart TD
 
 ## 🚀 Despliegue Rápido en OCI
 
-### 1. Inicializar la Base de Datos (Oracle Database 26ai)
-En tu Pluggable Database (`PDBLAB1`) o Autonomous Database:
-```sql
-@init_db.sql
-```
-Esto creará la tabla `KNOWLEDGE_BASE` con la columna vectorial y la tabla de auditoría `AGENT_TICKETS_LOG`.
+### 1. Prerrequisitos en OCI
+* **Base de Datos:** Oracle Database 26ai o 23ai (Base DB Service o Autonomous Database) accesible por la VCN.
+* **Instancia Compute:** `VM.Standard.E6.Flex` (Oracle Linux 10, 2 OCPUs, 32 GB RAM).
 
-### 2. Configurar la Instancia Compute en OCI (Oracle Linux 10)
 ```bash
-# Actualizar e instalar dependencias base
-sudo dnf update -y
-sudo dnf install -y python3 python3-pip git curl
-
-# Instalar Ollama y descargar el modelo optimizado para CPU
+# En la máquina Compute: instalar Ollama y el modelo Qwen 2.5 7B
 curl -fsSL https://ollama.com/install.sh | sh
 ollama pull qwen2.5:7b-instruct-q4_K_M
 
@@ -85,35 +78,26 @@ sudo firewall-cmd --permanent --add-port=8000/tcp
 sudo firewall-cmd --reload
 ```
 
-### 3. Clonar y Configurar el Proyecto
+### 2. Clonar el Repositorio
 ```bash
 git clone https://github.com/tipsforcloud/Oracle-VectorDesk.git
 cd Oracle-VectorDesk
+```
 
-# Instalar PyTorch CPU ligero primero (evita descargar 4 GB de CUDA innecesarios)
+### 3. Ejecutar el Asistente Interactivo de Instalación 🧙‍♂️
+El asistente guiará paso a paso la conexión con el DBSystem, la creación de las tablas vectoriales y la ingesta inicial:
+
+```bash
+# Recomendado: instalar PyTorch CPU antes de dependencias pesadas
 pip3 install --break-system-packages torch --index-url https://download.pytorch.org/whl/cpu
 
-# Instalar librerías de la aplicación
-pip3 install --break-system-packages -r requirements.txt
-pip3 install --break-system-packages reportlab pypdf
-
-# Configurar variables de conexión
-cp .env.example .env
-nano .env
+# Iniciar el Setup Wizard
+python3 install.py
 ```
 
-### 4. Generar Documentos e Ingestar en Oracle 26ai
+### 4. Iniciar el Servidor de Soporte
 ```bash
-# 1. Genera 10 PDFs de prueba con políticas corporativas realistas
-python3 generate_sample_pdfs.py
-
-# 2. Vectoriza e inserta los PDFs en Oracle Database 26ai
-python3 ingest_pdfs.py
-```
-
-### 5. Iniciar el Backend API
-```bash
-python3 agent.py
+python3 run.py
 ```
 
 ---
@@ -163,30 +147,48 @@ curl -X POST http://localhost:8000/api/v1/support/resolve \
 
 ### Ejecutar el Benchmark Completo (20 Preguntas)
 ```bash
-python3 run_benchmark.py
+python3 scripts/run_benchmark.py
 ```
 
 ---
 
-## 📂 Estructura del Repositorio
+## 📂 Estructura del Proyecto
 
 ```text
 Oracle-VectorDesk/
-├── docs_demo/                   # 10 Documentos PDF de políticas de TI generados
-├── agent.py                     # API Backend en FastAPI + búsqueda vectorial Oracle + Ollama
-├── ingest.py                    # Script de ingesta básica
-├── ingest_pdfs.py               # Ingesta y vectorización de archivos PDF con pypdf
-├── generate_sample_pdfs.py      # Generador de PDFs corporativos con ReportLab
-├── init_db.sql                  # DDL de Oracle Database 26ai (Tablas e Índices Vectoriales)
-├── benchmark_questions.json     # 20 preguntas de evaluación y ground-truth
-├── run_benchmark.py             # Ejecutor del benchmark y reporte de métricas
-├── guia_despliegue_paso_a_paso.md # Manual técnico completo y troubleshooting
-├── requirements.txt             # Dependencias Python
-├── .env.example                 # Plantilla de variables de entorno
-└── .gitignore                   # Exclusiones de seguridad
+├── src/                          # Núcleo modular de la aplicación
+│   ├── config.py                 # Configuración centralizada
+│   ├── database.py               # Capa de datos Oracle 26ai y vector search
+│   ├── embeddings.py             # Generación de embeddings 768d en CPU
+│   ├── llm.py                    # Integración con Ollama (Qwen 2.5 7B)
+│   ├── models.py                 # Esquemas Pydantic
+│   └── agent.py                  # API REST FastAPI y orquestación RAG
+│
+├── sql/                          # Scripts SQL DDL
+│   └── init_db.sql               # Inicialización de tablas y columnas VECTOR
+│
+├── scripts/                      # Herramientas operativas
+│   ├── generate_demo_pdfs.py     # Generador de 10 PDFs de prueba con ReportLab
+│   ├── ingest_documents.py       # Ingesta y vectorización de PDFs con pypdf
+│   └── run_benchmark.py          # Evaluador automatizado de 20 preguntas
+│
+├── data/                         # Datasets y documentos
+│   ├── benchmark_questions.json  # Preguntas de benchmark
+│   └── demo_docs/                # Almacén de PDFs generados
+│
+├── docs/                         # Documentación técnica
+│   └── deployment_guide.md       # Manual completo y Troubleshooting
+│
+├── install.py                    # Asistente interactivo de instalación (Setup Wizard)
+├── run.py                        # Script de inicio del servidor FastAPI
+├── requirements.txt              # Dependencias de Python
+├── .env.example                  # Plantilla de variables de entorno
+├── .gitignore                    # Reglas de exclusión de Git
+├── LICENSE                       # Licencia MIT
+└── README.md                     # Documentación principal
 ```
 
 ---
 
 ## 📄 Licencia
-Este proyecto se distribuye bajo la licencia **MIT**. Consulta el archivo `LICENSE` para más información.
+Este proyecto se distribuye bajo la licencia **MIT**. Consulta el archivo [LICENSE](LICENSE) para más información.

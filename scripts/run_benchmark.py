@@ -9,17 +9,23 @@ import sys
 import json
 import time
 import requests
+from pathlib import Path
+
+# Agregar raíz al sys.path
+BASE_DIR = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(BASE_DIR))
+
+from src.config import BENCHMARK_FILE
 
 API_URL = os.getenv("API_URL", "http://localhost:8000/api/v1/support/resolve")
-BENCHMARK_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "benchmark_questions.json")
 
 
 def run_benchmark(limit=None):
-    if not os.path.exists(BENCHMARK_FILE):
+    if not os.path.exists(str(BENCHMARK_FILE)):
         print(f"Error: No se encontró el archivo de benchmark: {BENCHMARK_FILE}")
         sys.exit(1)
 
-    with open(BENCHMARK_FILE, "r", encoding="utf-8") as f:
+    with open(str(BENCHMARK_FILE), "r", encoding="utf-8") as f:
         questions = json.load(f)
 
     if limit:
