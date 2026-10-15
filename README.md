@@ -9,7 +9,7 @@
 
 > **Agente autónomo de soporte técnico empresarial y Helpdesk de Nivel 1** con arquitectura RAG (*Retrieval-Augmented Generation*), impulsado de forma nativa por **Oracle Database 26ai (AI Vector Search)** e inferencia local en CPU sobre **Oracle Cloud Infrastructure (OCI)**. 
 > 
-> **Ultra bajo costo:** Diseñado para operar por **~\$130 - \$190 USD / mes** sin requerir GPUs costosas.
+> **Ultra bajo costo:** Operación mensual predecible desde **$100.76 USD / mes** (en base de datos existente / BYOL) hasta **$421.60 USD / mes** (infraestructura dedicada 100% nueva en OCI), sin requerir costosas GPUs ni cargos por token de terceros.
 
 ---
 
@@ -62,7 +62,20 @@ flowchart TD
 
 ---
 
-## 🚀 Despliegue Rápido en OCI
+## 💰 Análisis y Desglose de Costos en OCI (Validado con OCI Cost Estimator)
+
+A diferencia de soluciones tradicionales de IA que exigen GPUs dedicadas (A100/H100) con costos superiores a los \$1,500 - \$3,000 USD mensuales, **Oracle-VectorDesk** opera sobre una arquitectura plana y predecible en OCI:
+
+| Componente OCI | Especificación Técnica | Utilización | Costo Mensual Estimado |
+| :--- | :--- | :---: | :---: |
+| **OCI Compute (AMD E6)** | `VM.Standard.E6.Flex` (2 OCPUs / 4 vCPUs, 32 GB RAM) | 744 hrs / mes | **\$92.26 USD** |
+| **Boot Volume** | 200 GB Balanced (VPU 10) | 744 hrs / mes | **\$8.50 USD** |
+| **Oracle Base Database Service** | Standard Edition (4 ECPUs, 256 GB Storage) | 744 hrs / mes | **\$320.85 USD** |
+| 🚀 **Total Infraestructura Dedicada (Greenfield)** | *Base de Datos 26ai Dedicada + Cómputo E6* | | **\$421.60 USD / mes** |
+| 💡 **Total para Clientes con BD Oracle Existente / BYOL** | *Aprovechando su DB actual ("Bring AI to Data")* | | **\$100.76 USD / mes** |
+| ⚡ **Opción Autonomous Database Serverless (1 ECPU)** | *1 ECPU Serverless + Cómputo E6* | | **~\$195.00 USD / mes** |
+
+> **Nota de Negocio:** Para empresas que ya cuentan con un DBSystem, Autonomous Database o Exadata en OCI, el costo incremental de adoptar Oracle-VectorDesk es únicamente la instancia Compute E6 (**~\$100.76 USD/mes**), amortizando al máximo su inversión actual en licencias y cómputo de base de datos.
 
 ### 1. Prerrequisitos en OCI
 * **Base de Datos:** Oracle Database 26ai o 23ai (Base DB Service o Autonomous Database) accesible por la VCN.
