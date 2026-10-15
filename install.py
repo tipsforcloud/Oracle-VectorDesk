@@ -132,7 +132,7 @@ def setup_database_config():
         "",
         "# Inferencia en CPU (Ollama)",
         "OLLAMA_URL=http://localhost:11434/api/generate",
-        "OLLAMA_MODEL=qwen2.5:7b-instruct-q4_K_M",
+        "OLLAMA_MODEL=qwen3:4b",
         "",
         "# Modelo de Embeddings y Umbral",
         "EMBEDDING_MODEL_NAME=intfloat/multilingual-e5-base",
@@ -198,9 +198,9 @@ def check_ollama_service():
         if resp.status_code == 200:
             models = [m.get("name") for m in resp.json().get("models", [])]
             print(f"  [✓] Servicio Ollama activo. Modelos disponibles: {', '.join(models) if models else 'Ninguno'}")
-            if not any("qwen2.5:7b" in m for m in models):
-                print("  [!] Aviso: El modelo 'qwen2.5:7b-instruct-q4_K_M' no está descargado.")
-                print("      Ejecuta en consola: ollama pull qwen2.5:7b-instruct-q4_K_M")
+            if not any("qwen3" in m.lower() or "qwen2.5" in m.lower() for m in models):
+                print("  [!] Aviso: El modelo 'qwen3:4b' no está descargado.")
+                print("      Ejecuta en consola: ollama pull qwen3:4b")
         else:
             print("  [!] Ollama respondió con código no exitoso.")
     except Exception:

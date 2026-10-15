@@ -16,7 +16,7 @@
 ## 🌟 Características Principales
 
 * **"Bring AI to the Data":** Todo el conocimiento corporativo reside y se consulta dentro de Oracle Database 26ai mediante columnas nativas `VECTOR(768, FLOAT32)` y la función `VECTOR_DISTANCE(..., COSINE)`. Los datos sensibles de la empresa nunca viajan a nubes de terceros ni a bases de datos vectoriales externas.
-* **100% Inferencia en CPU (Sin GPUs):** Ejecuta **Qwen 2.5 7B Instruct** cuantizado (Q4_K_M) sobre procesadores AMD EPYC en instancias `VM.Standard.E6.Flex`, manteniendo costos fijos y predecibles.
+* **100% Inferencia en CPU (Sin GPUs):** Ejecuta **Qwen3 4B** (o Qwen 2.5 7B) en CPU sobre procesadores AMD EPYC en instancias `VM.Standard.E6.Flex`, optimizando el consumo de RAM a solo ~2.5 GB y duplicando la velocidad de generación con latencias de 4 a 6 segundos.
 * **Tolerancia Cero a la Alucinación:** Incorpora un umbral estricto de similitud semántica (`similarity < 0.35`). Si la consulta del usuario no tiene respaldo documental comprobado en Oracle, el agente **no inventa** y escala automáticamente el caso a soporte humano.
 * **Auditoría Empresarial Nativa:** Cada interacción, latencia en milisegundos, nivel de confianza y contexto recuperado se persiste automáticamente en la tabla `AGENT_TICKETS_LOG`.
 * **Wizard Interactivo de Instalación:** Incluye `install.py` para validar conectividad con el DBSystem, configurar variables, crear DDLs vectoriales e ingestar datos en minutos.
@@ -35,7 +35,7 @@ flowchart TD
     subgraph VM_Compute ["OCI Compute E6 (Inferencia y API Backend)"]
         API["API REST Backend (FastAPI / Uvicorn :8000)"]
         EmbedModel["Modelo Embeddings CPU (intfloat/multilingual-e5-base 768d)"]
-        Ollama["Motor LLM en CPU (qwen2.5:7b-instruct-q4_K_M)"]
+        Ollama["Motor LLM en CPU (qwen3:4b / qwen2.5)"]
     end
 
     subgraph Oracle_DB ["Oracle Database 26ai (Vector Store en VCN)"]
@@ -90,9 +90,9 @@ A diferencia de soluciones tradicionales de IA que exigen GPUs dedicadas (A100/H
 * **Instancia Compute:** `VM.Standard.E6.Flex` (Oracle Linux 10, 2 OCPUs, 32 GB RAM).
 
 ```bash
-# En la máquina Compute: instalar Ollama y el modelo Qwen 2.5 7B
+# En la máquina Compute: instalar Ollama y descargar Qwen3 4B (ultrarrápido en CPU)
 curl -fsSL https://ollama.com/install.sh | sh
-ollama pull qwen2.5:7b-instruct-q4_K_M
+ollama pull qwen3:4b
 
 # Abrir el puerto 8000 en el firewall del sistema operativo
 sudo firewall-cmd --permanent --add-port=8000/tcp

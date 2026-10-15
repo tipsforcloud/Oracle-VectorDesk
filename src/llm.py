@@ -3,6 +3,7 @@ Cliente del Motor LLM en CPU (Ollama)
 Gestiona la inferencia local con Qwen 2.5 7B sobre procesadores AMD EPYC en OCI Compute.
 """
 
+import re
 import requests
 from typing import Optional
 from src.config import OLLAMA_URL, OLLAMA_MODEL
@@ -42,7 +43,10 @@ def generate_support_resolution(user_query: str, retrieved_context: str) -> str:
         )
         response.raise_for_status()
         data = response.json()
-        return data.get("response", "").strip()
+        raw_text = data.get("response", "").strip()
+        # Eliminar posibles bloques de razonamiento interno <think>...</think> si el modelo los emite
+        clean_text = re.sub(r"<think>.*?</think>", "", raw_text, flags=re.DOTALL).strip()
+        return clean_text if clean_text else raw_text
 
     except requests.exceptions.RequestException as e:
         raise RuntimeError(f"Error conectando con el motor LLM en Ollama ({OLLAMA_URL}): {str(e)}")
