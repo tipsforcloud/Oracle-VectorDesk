@@ -162,7 +162,7 @@ curl http://localhost:8000/health
   "status": "ok",
   "database": "Oracle Database 26ai AI Vector Search",
   "embedding_model": "intfloat/multilingual-e5-base (768 dims)",
-  "llm_model": "qwen2.5:7b-instruct-q4_K_M"
+  "llm_model": "qwen3:4b"
 }
 ```
 
@@ -199,6 +199,14 @@ curl -X POST http://localhost:8000/api/v1/support/resolve \
 python3 scripts/run_benchmark.py
 ```
 
+### 🧹 Limpieza y Reinicio de Base de Datos (Mantenimiento)
+Si necesitas reiniciar las pruebas, vaciar la base de conocimiento o reinstalar el agente desde cero:
+```bash
+# Limpiar y opcionalmente recrear las tablas vectoriales
+python3 scripts/reset_database.py
+```
+> **Nota:** El asistente `python3 install.py` también detecta automáticamente si las tablas ya existen en el esquema y te permite elegir interactivamente entre conservarlas o purgarlas para una instalación limpia.
+
 ---
 
 ## 📂 Estructura del Proyecto
@@ -219,6 +227,7 @@ Oracle-VectorDesk/
 ├── scripts/                      # Herramientas operativas
 │   ├── generate_demo_pdfs.py     # Generador de 10 PDFs de prueba con ReportLab
 │   ├── ingest_documents.py       # Ingesta y vectorización de PDFs propios o demo
+│   ├── reset_database.py         # 🧹 Limpieza y purga controlada de tablas vectoriales
 │   ├── run_benchmark.py          # Evaluador automatizado de 20 preguntas
 │   └── setup_systemd_service.py  # Instalador del servicio systemd en segundo plano
 │

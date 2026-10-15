@@ -148,46 +148,81 @@ def setup_database_config():
 
 
 def execute_sql_initialization(user, password, dsn, wallet_dir=None, wallet_password=None):
-    print("\n[3/6] Creación de Estructuras Vectoriales en Oracle 26ai...")
-    run_ddl = input("  ¿Deseas verificar/crear las tablas de KNOWLEDGE_BASE y auditoría en la BD? [S/n]: ").strip().lower()
-    if run_ddl != 'n':
-        sql_file = BASE_DIR / "sql" / "init_db.sql"
-        if not sql_file.exists():
-            print(f"  [!] No se encontró el archivo: {sql_file}")
-            return
+    print("\n[3/6] Configuración de Estructuras Vectoriales en Oracle 26ai...")
+    sql_file = BASE_DIR / "sql" / "init_db.sql"
+    if not sql_file.exists():
+        print(f"  [!] No se encontró el archivo DDL: {sql_file}")
+        return
 
-        try:
-            import oracledb
-            connect_kwargs = {
-                "user": user,
-                "password": password,
-                "dsn": dsn
-            }
-            if wallet_dir:
-                connect_kwargs["wallet_location"] = wallet_dir
-                if wallet_password:
-                    connect_kwargs["wallet_password"] = wallet_password
+    try:
+        import oracledb
+        connect_kwargs = {
+            "user": user,
+            "password": password,
+            "dsn": dsn
+        }
+        if wallet_dir:
+            connect_kwargs["wallet_location"] = wallet_dir
+            if wallet_password:
+                connect_kwargs["wallet_password"] = wallet_password
 
-            conn = oracledb.connect(**connect_kwargs)
-            with open(str(sql_file), "r", encoding="utf-8") as f:
-                content = f.read()
+        conn = oracledb.connect(**connect_kwargs)
+        cur = conn.cursor()
 
-            # Separar sentencias por ';'
-            statements = [stmt.strip() for stmt in content.split(";") if stmt.strip() and not stmt.strip().startswith("--")]
-            with conn.cursor() as cur:
-                for stmt in statements:
+        # Inspeccionar si las tablas ya existen en el esquema del usuario
+        cur.execute("""
+            SELECT table_name 
+            FROM user_tables 
+            WHERE table_name IN ('KNOWLEDGE_BASE', 'AGENT_TICKETS_LOG')
+        """)
+        existing_tables = [row[0] for row in cur.fetchall()]
+
+        if existing_tables:
+            print(f"  [i] Se detectaron tablas existentes en el esquema: {', '.join(existing_tables)}")
+            print("      ¿Cómo deseas proceder?")
+            print("      1) Conservar tablas y datos existentes (Continuar instalación).")
+            print("      2) Eliminar tablas existentes (DROP PURGE) y crearlas limpias desde cero.")
+            print("      3) Cancelar instalación.")
+            
+            action = input("      Selecciona una opción [1/2/3, por defecto 1]: ").strip()
+            if action == "2":
+                print("      Purgando tablas previas de Oracle-VectorDesk...")
+                for t in existing_tables:
                     try:
-                        cur.execute(stmt)
-                    except Exception as err:
-                        if "ORA-00955" in str(err) or "already exists" in str(err):
-                            pass  # Ya existe la tabla o índice
-                        else:
-                            print(f"    Nota en sentencia: {err}")
-            conn.commit()
-            conn.close()
-            print("  [✓] Estructuras de base de datos verificadas y listas.")
-        except Exception as e:
-            print(f"  [!] Error al ejecutar DDL: {e}")
+                        cur.execute(f"DROP TABLE {t} PURGE")
+                        print(f"      [✓] Tabla {t} eliminada.")
+                    except Exception as drop_err:
+                        print(f"      [!] Error eliminando {t}: {drop_err}")
+                conn.commit()
+            elif action == "3":
+                print("      Instalación cancelada por el usuario.")
+                conn.close()
+                sys.exit(0)
+            else:
+                print("      [✓] Conservando tablas y datos existentes.")
+                conn.close()
+                return
+
+        # Crear estructuras mediante init_db.sql
+        print("  Creando estructuras vectoriales (VECTOR 768d y logs de auditoría)...")
+        with open(str(sql_file), "r", encoding="utf-8") as f:
+            content = f.read()
+
+        statements = [stmt.strip() for stmt in content.split(";") if stmt.strip() and not stmt.strip().startswith("--")]
+        for stmt in statements:
+            try:
+                cur.execute(stmt)
+            except Exception as err:
+                if "ORA-00955" in str(err) or "already exists" in str(err):
+                    pass  # Ya existe la tabla o índice
+                else:
+                    print(f"    Nota en sentencia: {err}")
+        conn.commit()
+        conn.close()
+        print("  [✓] Estructuras de base de datos creadas y listas.")
+
+    except Exception as e:
+        print(f"  [!] Error al interactuar con la base de datos: {e}")
 
 
 def check_ollama_service():
