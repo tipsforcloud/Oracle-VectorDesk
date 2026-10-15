@@ -106,7 +106,10 @@ cd Oracle-VectorDesk
 ```
 
 ### 3. Ejecutar el Asistente Interactivo de Instalación 🧙‍♂️
-El asistente guiará paso a paso la conexión con el DBSystem, la creación de las tablas vectoriales y la ingesta inicial:
+El asistente automatiza la configuración completa y soporta 3 modalidades de base de datos:
+* **Modo 1 (Recomendado para Base DB en VM):** Aprovisionamiento automático conectándose por SSH al DBSystem como `SYSDBA` (crea o valida el usuario `app_support`, asigna privilegios/cuotas, crea las tablas con columnas nativas `VECTOR(768, FLOAT32)` y ajusta `sqlnet.ora`).
+* **Modo 2 (Conexión Directa SQL*Net):** Cuando el esquema `app_support` ya fue creado previamente por un DBA.
+* **Modo 3 (Autonomous AI Database):** Despliegue sobre ADB Serverless con Wallet mTLS.
 
 ```bash
 # Recomendado: instalar PyTorch CPU antes de dependencias pesadas

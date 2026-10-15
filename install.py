@@ -61,37 +61,202 @@ def check_python_dependencies():
         print("  [✓] Todas las dependencias base de Python están presentes.")
 
 
-def setup_database_config():
-    print("\n[2/6] Configuración de Conexión a Oracle Database 26ai...")
-    print("  Selecciona la modalidad de tu Base de Datos en OCI:")
-    print("  1) Base Database Service en VM (Conexión TCP directa por VCN) [Por defecto]")
-    print("  2) Autonomous AI Database Serverless (mTLS con Wallet zip/directorio)")
+def run_ssh_command(ssh_host: str, ssh_user: str, ssh_key: str, command: str):
+    """Ejecuta un comando bash remoto en el DBSystem a través de SSH."""
+    cmd = ["ssh", "-o", "StrictHostKeyChecking=no", "-o", "ConnectTimeout=10"]
+    if ssh_key:
+        key_p = Path(ssh_key).expanduser()
+        if key_p.exists():
+            cmd.extend(["-i", str(key_p)])
+    cmd.append(f"{ssh_user}@{ssh_host}")
+    cmd.append(command)
 
-    db_flavor = input("  Modalidad [1/2, defecto 1]: ").strip()
+    try:
+        res = subprocess.run(cmd, capture_output=True, text=True, timeout=90)
+        output = (res.stdout + "\n" + res.stderr).strip()
+        return (res.returncode == 0), output
+    except Exception as e:
+        return False, str(e)
+
+
+def run_ssh_sysdba_sql(ssh_host: str, ssh_user: str, ssh_key: str, pdb_name: str, sql_commands: str):
+    """Ejecuta un bloque SQL como SYSDBA en el DBSystem mediante SSH."""
+    pdb_clean = pdb_name.split(".")[0].upper()
+    full_sql = f"""
+ALTER SESSION SET CONTAINER = {pdb_clean};
+{sql_commands}
+EXIT;
+"""
+    remote_sh = f"""sudo su - oracle -c "sqlplus -s / as sysdba << 'EOF'
+SET PAGESIZE 0 FEEDBACK OFF VERIFY OFF HEADING OFF ECHO OFF
+{full_sql}
+EOF"
+"""
+    return run_ssh_command(ssh_host, ssh_user, ssh_key, remote_sh)
+
+
+def setup_database_config():
+    print("\n[2/6] Configuración y Conexión a Oracle Database 26ai...")
+    print("  Selecciona la modalidad de tu Base de Datos en OCI:")
+    print("  1) Base Database Service en VM (Aprovisionamiento por SSH como SYSDBA) [Recomendado]")
+    print("  2) Base Database Service en VM (Conexión Directa SQL*Net TCP)")
+    print("  3) Autonomous AI Database Serverless (mTLS con Wallet zip/directorio)")
+
+    db_flavor = input("  Modalidad [1/2/3, defecto 1]: ").strip()
     wallet_dir = None
     wallet_password = None
+    already_provisioned = False
 
-    if db_flavor == "2":
+    if db_flavor == "3":
         print("\n  -- Conexión a Oracle Autonomous AI Database (Serverless) --")
         wallet_dir = ask_input("  Ruta al directorio de la Wallet (descomprimida)", "/opt/oracle/wallet")
         wallet_pwd_input = getpass.getpass("  Contraseña de la Wallet (opcional, Enter para omitir): ").strip()
         wallet_password = wallet_pwd_input if wallet_pwd_input else None
         full_dsn = ask_input("  Nombre del TNS Alias / Servicio", "vectordb_low")
         user = ask_input("  Usuario de la Base de Datos", "ADMIN")
-    else:
-        print("\n  -- Conexión a Oracle Base Database Service (VM) --")
+        password = getpass.getpass("  Contraseña del Usuario DB: ")
+        while not password:
+            password = getpass.getpass("  La contraseña no puede estar vacía. Reingresa: ")
+
+    elif db_flavor == "2":
+        print("\n  -- Conexión Directa a Oracle Base Database Service (VM) --")
         host = ask_input("  Host / FQDN del DBSystem", "dbhost9185.sub04051019361.sarizavcn.oraclevcn.com")
         port = ask_input("  Puerto del Listener", "1521")
         service = ask_input("  Nombre del Servicio / PDB", "pdblab1.sub04051019361.sarizavcn.oraclevcn.com")
         user = ask_input("  Usuario de la Base de Datos", "app_support")
         full_dsn = f"{host}:{port}/{service}"
-    
-    password = getpass.getpass("  Contraseña del Usuario DB: ")
-    while not password:
-        password = getpass.getpass("  La contraseña no puede estar vacía. Reingresa: ")
+        password = getpass.getpass("  Contraseña del Usuario DB: ")
+        while not password:
+            password = getpass.getpass("  La contraseña no puede estar vacía. Reingresa: ")
 
-    print(f"\n  Validando conectividad con Oracle 26ai en: {full_dsn}...")
+    else:
+        # Opción 1: Aprovisionamiento Automático por SSH en DBSystem como SYSDBA
+        print("\n  -- Aprovisionamiento Automático por SSH en DBSystem (SYSDBA) --")
+        ssh_host = ask_input("  Host / FQDN o IP del DBSystem (SSH)", "dbhost9185.sub04051019361.sarizavcn.oraclevcn.com")
+        ssh_user = ask_input("  Usuario SSH del DBSystem", "opc")
+        ssh_key = ask_input("  Ruta a la llave privada SSH (o Enter si usas agente/default)", "~/.ssh/id_rsa")
+        port = ask_input("  Puerto del Listener", "1521")
+        service = ask_input("  Nombre del Servicio / PDB", "pdblab1.sub04051019361.sarizavcn.oraclevcn.com")
+        user = ask_input("  Usuario de Base de Datos para el Agente", "app_support")
+        password = getpass.getpass("  Contraseña para el Usuario DB: ")
+        while not password:
+            password = getpass.getpass("  La contraseña no puede estar vacía. Reingresa: ")
 
+        pdb_clean = service.split(".")[0].upper()
+        full_dsn = f"{ssh_host}:{port}/{service}"
+
+        print(f"\n  [1/4] Probando conexión SSH con {ssh_user}@{ssh_host} y verificando SYSDBA en {pdb_clean}...")
+        test_sql = "SELECT banner_full FROM v$version WHERE ROWNUM = 1;"
+        ok, out = run_ssh_sysdba_sql(ssh_host, ssh_user, ssh_key, pdb_clean, test_sql)
+        if not ok or not out:
+            print(f"  [!] Advertencia conectando por SSH o ejecutando SQL*Plus: {out}")
+            retry = input("  ¿Deseas continuar de todos modos? [s/N]: ").strip().lower()
+            if retry != 's':
+                sys.exit(1)
+        else:
+            first_line = [l.strip() for l in out.splitlines() if l.strip()]
+            print(f"  [✓] Conexión SSH y SYSDBA exitosa. Motor: {first_line[0] if first_line else 'Oracle Database'}")
+
+        print(f"\n  [2/4] Verificando / Creando usuario '{user}' en {pdb_clean}...")
+        create_user_sql = f"""
+DECLARE
+    v_count NUMBER;
+BEGIN
+    SELECT count(*) INTO v_count FROM all_users WHERE username = UPPER('{user}');
+    IF v_count = 0 THEN
+        EXECUTE IMMEDIATE 'CREATE USER {user} IDENTIFIED BY "{password}"';
+        EXECUTE IMMEDIATE 'GRANT CONNECT, RESOURCE, UNLIMITED TABLESPACE TO {user}';
+    ELSE
+        EXECUTE IMMEDIATE 'ALTER USER {user} IDENTIFIED BY "{password}"';
+        EXECUTE IMMEDIATE 'GRANT CONNECT, RESOURCE, UNLIMITED TABLESPACE TO {user}';
+    END IF;
+END;
+/
+"""
+        ok_usr, out_usr = run_ssh_sysdba_sql(ssh_host, ssh_user, ssh_key, pdb_clean, create_user_sql)
+        if ok_usr:
+            print(f"  [✓] Usuario '{user}' configurado con privilegios y cuota en {pdb_clean}.")
+        else:
+            print(f"  [!] Nota al verificar usuario: {out_usr}")
+
+        print(f"\n  [3/4] Inspeccionando tablas vectoriales existentes en esquema '{user}'...")
+        check_tables_sql = f"""
+SELECT table_name FROM all_tables WHERE owner = UPPER('{user}') AND table_name IN ('KNOWLEDGE_BASE', 'AGENT_TICKETS_LOG');
+"""
+        _, out_tbls = run_ssh_sysdba_sql(ssh_host, ssh_user, ssh_key, pdb_clean, check_tables_sql)
+        found_tables = [line.strip() for line in out_tbls.splitlines() if line.strip() in ("KNOWLEDGE_BASE", "AGENT_TICKETS_LOG")]
+
+        recreate_tables = True
+        if found_tables:
+            print(f"  [i] Tablas existentes detectadas en {user}: {', '.join(found_tables)}")
+            print("      1) Conservar tablas y datos existentes.")
+            print("      2) Eliminar tablas existentes (DROP PURGE) y crearlas limpias desde cero.")
+            print("      3) Cancelar instalación.")
+            action = input("      Selecciona una opción [1/2/3, por defecto 1]: ").strip()
+            if action == "2":
+                print("      Purgando tablas previas por SSH...")
+                drop_sql = f"""
+BEGIN
+    FOR t IN (SELECT table_name FROM all_tables WHERE owner = UPPER('{user}') AND table_name IN ('KNOWLEDGE_BASE', 'AGENT_TICKETS_LOG')) LOOP
+        EXECUTE IMMEDIATE 'DROP TABLE ' || UPPER('{user}') || '.' || t.table_name || ' PURGE';
+    END LOOP;
+END;
+/
+"""
+                run_ssh_sysdba_sql(ssh_host, ssh_user, ssh_key, pdb_clean, drop_sql)
+                recreate_tables = True
+            elif action == "3":
+                print("      Instalación cancelada por el usuario.")
+                sys.exit(0)
+            else:
+                print("      [✓] Conservando tablas y datos existentes.")
+                recreate_tables = False
+
+        if recreate_tables:
+            print(f"  Ejecutando DDL de tablas vectoriales en esquema '{user}'...")
+            ddl_sql = f"""
+ALTER SESSION SET CURRENT_SCHEMA = {user};
+CREATE TABLE {user}.knowledge_base (
+    id NUMBER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    title VARCHAR2(255) NOT NULL,
+    category VARCHAR2(100),
+    source_doc VARCHAR2(255),
+    content CLOB NOT NULL,
+    embedding VECTOR(768, FLOAT32),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+CREATE TABLE {user}.agent_tickets_log (
+    ticket_id NUMBER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    user_query CLOB NOT NULL,
+    retrieved_docs CLOB,
+    top_similarity NUMBER(5, 4),
+    generated_answer CLOB,
+    escalated NUMBER(1) DEFAULT 0,
+    latency_ms NUMBER,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+"""
+            ok_ddl, out_ddl = run_ssh_sysdba_sql(ssh_host, ssh_user, ssh_key, pdb_clean, ddl_sql)
+            if ok_ddl:
+                print("  [✓] Estructuras vectoriales creadas exitosamente con VECTOR(768, FLOAT32).")
+            else:
+                print(f"  [!] Nota en creación de tablas: {out_ddl}")
+
+        print("\n  [4/4] Verificando parámetros de cifrado de red (sqlnet.ora) en DBSystem...")
+        fix_sqlnet_cmd = """sudo su - oracle -c '
+for f in $(find /u01/app/oracle -name sqlnet.ora 2>/dev/null); do
+    if grep -qi "SQLNET.ENCRYPTION_SERVER" "$f"; then
+        sed -i "s/SQLNET.ENCRYPTION_SERVER.*=.*/SQLNET.ENCRYPTION_SERVER = ACCEPTED/gI" "$f"
+        sed -i "s/SQLNET.CRYPTO_CHECKSUM_SERVER.*=.*/SQLNET.CRYPTO_CHECKSUM_SERVER = ACCEPTED/gI" "$f"
+    fi
+done
+'"""
+        run_ssh_command(ssh_host, ssh_user, ssh_key, fix_sqlnet_cmd)
+        print("  [✓] sqlnet.ora verificado para permitir conexión Thin de python-oracledb.")
+
+        already_provisioned = True
+
+    print(f"\n  Validando conectividad TCP directa con Oracle 26ai en: {full_dsn}...")
     try:
         import oracledb
         connect_kwargs = {
@@ -109,9 +274,9 @@ def setup_database_config():
             cur.execute("SELECT banner_full FROM v$version WHERE ROWNUM = 1")
             version = cur.fetchone()[0]
         conn.close()
-        print(f"  [✓] ¡Conexión exitosa! Motor detectado: {version}")
+        print(f"  [✓] ¡Conexión directa TCP exitosa desde la máquina del agente!")
     except Exception as e:
-        print(f"\n  [!] Advertencia: No se pudo conectar a la base de datos: {e}")
+        print(f"\n  [!] Advertencia: No se pudo conectar directamente por TCP a la base de datos: {e}")
         retry = input("  ¿Deseas guardar la configuración de todos modos? [S/n]: ").strip().lower()
         if retry == 'n':
             sys.exit(1)
@@ -144,11 +309,15 @@ def setup_database_config():
         f.write("\n".join(env_lines) + "\n")
     print("  [✓] Archivo de entorno '.env' creado y configurado correctamente.")
 
-    return user, password, full_dsn, wallet_dir, wallet_password
+    return user, password, full_dsn, wallet_dir, wallet_password, already_provisioned
 
 
-def execute_sql_initialization(user, password, dsn, wallet_dir=None, wallet_password=None):
+def execute_sql_initialization(user, password, dsn, wallet_dir=None, wallet_password=None, already_provisioned=False):
     print("\n[3/6] Configuración de Estructuras Vectoriales en Oracle 26ai...")
+    if already_provisioned:
+        print("  [✓] Estructuras vectoriales y usuario creados previamente vía SSH en el DBSystem.")
+        return
+
     sql_file = BASE_DIR / "sql" / "init_db.sql"
     if not sql_file.exists():
         print(f"  [!] No se encontró el archivo DDL: {sql_file}")
@@ -288,8 +457,8 @@ def configure_systemd_service():
 def main():
     print_banner()
     check_python_dependencies()
-    user, password, dsn, wallet_dir, wallet_password = setup_database_config()
-    execute_sql_initialization(user, password, dsn, wallet_dir, wallet_password)
+    user, password, dsn, wallet_dir, wallet_password, already_provisioned = setup_database_config()
+    execute_sql_initialization(user, password, dsn, wallet_dir, wallet_password, already_provisioned)
     check_ollama_service()
     setup_knowledge_base()
     service_active = configure_systemd_service()
