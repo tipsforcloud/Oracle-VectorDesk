@@ -1,0 +1,65 @@
+# Variables de entorno y secretos
+.env
+.env.local
+*.env
+
+# Python y Entornos Virtuales
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+rag-env/
+ENV/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Wallets y Certificados de Oracle
+wallet/
+*.wallet
+*.sso
+*.p12
+*.jks
+cwallet.sso
+ewallet.p12
+ewallet.pem
+sqlnet.log
+
+# Llaves y Tokens
+*.key
+*.pem
+*.token
+*.pub
+id_rsa*
+console.key
+
+# Logs y Archivos Temporales
+*.log
+logs/
+tmp/
+.cache/
+.pytest_cache/
+
+# IDEs y Editores
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db

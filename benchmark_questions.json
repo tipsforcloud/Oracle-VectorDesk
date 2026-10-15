@@ -1,0 +1,142 @@
+[
+  {
+    "id": 1,
+    "doc_code": "POL-TI-01",
+    "topic": "Wi-Fi Visitantes",
+    "question": "¿A qué número de extensión o portal debo solicitar un código de Wi-Fi para un proveedor externo y cuánto tiempo dura el acceso?",
+    "expected_key_facts": ["ext. 1001", "https://wifi-guest.innovacorp.local", "8 horas continuas"]
+  },
+  {
+    "id": 2,
+    "doc_code": "POL-TI-01",
+    "topic": "Restricciones Wi-Fi",
+    "question": "¿Qué restricciones de velocidad y protocolos tiene la red inalámbrica de visitantes InnovaCorp-Guest?",
+    "expected_key_facts": ["Client Isolation", "bloqueo P2P / BitTorrent / Tor", "streaming limitado a 1.5 Mbps"]
+  },
+  {
+    "id": 3,
+    "doc_code": "PROC-TI-02",
+    "topic": "Ciclo de Vida Laptop",
+    "question": "¿Cada cuántos meses se realiza la renovación obligatoria de laptops estándar ThinkPad o Latitude?",
+    "expected_key_facts": ["36 meses", "3 años", "estaciones de desarrollo 48 meses"]
+  },
+  {
+    "id": 4,
+    "doc_code": "PROC-TI-02",
+    "topic": "Devolución de Hardware",
+    "question": "¿Qué categoría de ticket debo seleccionar en Jira para renovar mi portátil y cuántos días tengo para devolver el equipo anterior?",
+    "expected_key_facts": ["HW-RENOVACION", "Piso 3 Torre A", "5 días hábiles"]
+  },
+  {
+    "id": 5,
+    "doc_code": "GUIA-TI-03",
+    "topic": "Enrolamiento MFA",
+    "question": "¿Cuál es la URL oficial para configurar Microsoft Authenticator y qué método está prohibido usar como primario?",
+    "expected_key_facts": ["https://aka.ms/mfasetup", "prohibido SMS / llamadas como primario", "coincidencia de 2 dígitos"]
+  },
+  {
+    "id": 6,
+    "doc_code": "GUIA-TI-03",
+    "topic": "Error MFA Loop / TAP",
+    "question": "¿Qué debo hacer si entro en un bucle 'MFA Loop' en el navegador o si perdí mi teléfono con el autenticador?",
+    "expected_key_facts": ["borrar cookies y caché", "Temporary Access Pass (TAP)", "vigencia de 4 horas", "seguridad.identidad@innovacorp.internal"]
+  },
+  {
+    "id": 7,
+    "doc_code": "PROC-TI-04",
+    "topic": "Formulario SAP",
+    "question": "¿Cuál es el formulario requerido para solicitar roles en SAP S/4HANA y qué firmas de aprobación necesita?",
+    "expected_key_facts": ["FORM-SAP-SEC-04", "Jefe Inmediato", "BPO del módulo", "CISO"]
+  },
+  {
+    "id": 8,
+    "doc_code": "PROC-TI-04",
+    "topic": "Bloqueo por Inactividad SAP",
+    "question": "¿Qué pasa si no inicio sesión en mi cuenta de SAP S/4HANA durante 60 días consecutivos y cuál es el SLA de atención?",
+    "expected_key_facts": ["bloqueo automático tras 60 días", "job Z_AUTO_LOCK_USERS", "SLA 72 horas hábiles"]
+  },
+  {
+    "id": 9,
+    "doc_code": "POL-TI-05",
+    "topic": "Requisitos BYOD",
+    "question": "¿Qué versión mínima de sistema operativo y PIN de seguridad debe tener mi teléfono personal para sincronizar correo en Intune?",
+    "expected_key_facts": ["iOS 16.0 o Android 13", "PIN mínimo 6 dígitos o biometría", "Portal de Empresa Intune"]
+  },
+  {
+    "id": 10,
+    "doc_code": "POL-TI-05",
+    "topic": "Pérdida de Celular BYOD",
+    "question": "¿A qué teléfono o correo de emergencia debo reportar si pierdo mi smartphone personal enrolado en BYOD y qué tipo de borrado se aplica?",
+    "expected_key_facts": ["+1-800-555-0199", "soc-alert@innovacorp.internal", "Selective Wipe / Borrado Selectivo Remoto"]
+  },
+  {
+    "id": 11,
+    "doc_code": "PROC-TI-06",
+    "topic": "Cuota OneDrive",
+    "question": "¿Qué capacidad de almacenamiento tengo asignada en OneDrive for Business y cuáles carpetas se respaldan automáticamente?",
+    "expected_key_facts": ["1 Terabyte (1 TB)", "Escritorio, Documentos e Imágenes", "Known Folder Move (KFM)"]
+  },
+  {
+    "id": 12,
+    "doc_code": "PROC-TI-06",
+    "topic": "Recuperación de Archivos Borrados",
+    "question": "¿Durante cuántos días puedo recuperar un archivo borrado de la papelera de segundo nivel con la ayuda de TI?",
+    "expected_key_facts": ["30 días en papelera de usuario", "93 días adicionales en papelera de segundo nivel", "prohibido USB personal"]
+  },
+  {
+    "id": 13,
+    "doc_code": "PROC-TI-07",
+    "topic": "Notificación Offboarding",
+    "question": "¿Con cuánta anticipación debe RRHH notificar la salida de un colaborador y a qué hora se deshabilitan sus cuentas?",
+    "expected_key_facts": ["ticket OFF-TALENTO en ServiceNow", "24 horas de anticipación", "18:00 horas del último día laboral"]
+  },
+  {
+    "id": 14,
+    "doc_code": "PROC-TI-07",
+    "topic": "Buzón de Empleado Saliente",
+    "question": "¿Durante cuánto tiempo tiene acceso de lectura el supervisor al buzón de correo compartido de un colaborador desvinculado?",
+    "expected_key_facts": ["Buzón Compartido / Shared Mailbox", "30 días calendario", "archivado en frío posterior"]
+  },
+  {
+    "id": 15,
+    "doc_code": "PROTO-TI-08",
+    "topic": "Reporte de Phishing",
+    "question": "¿A qué dirección de correo debo reenviar un mensaje sospechoso de phishing si no tengo el botón de reporte en Outlook?",
+    "expected_key_facts": ["phishing-alert@innovacorp.internal", "reenviar como archivo adjunto"]
+  },
+  {
+    "id": 16,
+    "doc_code": "PROTO-TI-08",
+    "topic": "Incidente Phishing con Clic",
+    "question": "Hice clic en un enlace de un correo malicioso y descargó un archivo sospechoso. ¿Debo apagar o reiniciar mi computadora?",
+    "expected_key_facts": ["desconectar cable Ethernet y apagar Wi-Fi", "NO APAGAR NI REINICIAR (preservar memoria RAM volátil)", "Línea Roja SOC ext. 9111"]
+  },
+  {
+    "id": 17,
+    "doc_code": "GUIA-TI-09",
+    "topic": "Colas de Impresión Universal",
+    "question": "¿Cuáles son las rutas UNC de las colas de impresión de red compartidas para imprimir en color y blanco/negro?",
+    "expected_key_facts": ["\\\\printserver01.innovacorp.local\\FollowMe-Color", "\\\\printserver01.innovacorp.local\\FollowMe-BW", "PaperCut"]
+  },
+  {
+    "id": 18,
+    "doc_code": "GUIA-TI-09",
+    "topic": "Timeout de Impresión",
+    "question": "¿Cuánto tiempo permanece un documento en la cola de impresión antes de cancelarse automáticamente si no acerco mi tarjeta RFID?",
+    "expected_key_facts": ["4 horas", "lector RFID contactless", "PIN de 4 dígitos en https://print.innovacorp.local"]
+  },
+  {
+    "id": 19,
+    "doc_code": "POL-TI-10",
+    "topic": "Horario Mesa de Ayuda",
+    "question": "¿Cuál es el horario de atención ordinario de la Mesa de Ayuda de TI Nivel 1 y qué número de extensión atiende?",
+    "expected_key_facts": ["lunes a viernes de 07:00 a 19:00 horas (GMT-5)", "extensión 4357", "portal Jira"]
+  },
+  {
+    "id": 20,
+    "doc_code": "POL-TI-10",
+    "topic": "Guardias On-Call y Emergencia",
+    "question": "¿Cuál es la línea telefónica y el PIN para activar la guardia de soporte crítico 24/7 en incidentes P1 fuera de horario?",
+    "expected_key_facts": ["+1-800-555-0199", "PIN de emergencia 9911", "incidentes P1 / Sev-1", "escalamiento a L2 en 15 minutos"]
+  }
+]
