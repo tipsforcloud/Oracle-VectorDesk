@@ -184,6 +184,23 @@ def setup_knowledge_base():
         print("      y ejecutar: python3 scripts/ingest_documents.py")
 
 
+def configure_systemd_service():
+    print("\n[6/6] Configuración de Servicio en Segundo Plano (systemd)...")
+    if sys.platform != "linux":
+        print("  Nota: systemd está disponible en servidores Linux (Oracle Linux / Ubuntu). Omitiendo.")
+        return False
+
+    install_srv = input("  ¿Deseas registrar e iniciar Oracle-VectorDesk como servicio de systemd? [S/n]: ").strip().lower()
+    if install_srv != 'n':
+        try:
+            from scripts.setup_systemd_service import setup_systemd
+            return setup_systemd(start_now=True)
+        except Exception as err:
+            print(f"  [!] No se pudo activar el servicio systemd: {err}")
+            return False
+    return False
+
+
 def main():
     print_banner()
     check_python_dependencies()
@@ -191,12 +208,22 @@ def main():
     execute_sql_initialization(user, password, dsn)
     check_ollama_service()
     setup_knowledge_base()
+    service_active = configure_systemd_service()
 
     print("\n================================================================================")
     print(" ¡DESPLIEGUE Y CONFIGURACIÓN COMPLETADOS CON ÉXITO! ")
     print("================================================================================")
-    print("\nPara iniciar el servicio del agente ejecuta:")
-    print("  python3 run.py")
+    if service_active:
+        print("\nEl agente ya está OPERATIVO EN SEGUNDO PLANO como servicio del sistema:")
+        print("  • Ver estado:        sudo systemctl status oracle-vectordesk")
+        print("  • Ver logs en vivo:  sudo journalctl -u oracle-vectordesk -f")
+        print("  • Reiniciar:         sudo systemctl restart oracle-vectordesk")
+    else:
+        print("\nPara iniciar el servicio manualmente en primer plano:")
+        print("  python3 run.py")
+        print("\nO para instalarlo como servicio en segundo plano más adelante:")
+        print("  python3 scripts/setup_systemd_service.py")
+
     print("\nPara ejecutar el benchmark de 20 preguntas:")
     print("  python3 scripts/run_benchmark.py")
     print("================================================================================\n")

@@ -1,0 +1,19 @@
+[Unit]
+Description=Oracle-VectorDesk AI Support Agent (FastAPI + Oracle Database 26ai)
+Documentation=https://github.com/tipsforcloud/Oracle-VectorDesk
+After=network.target ollama.service
+Wants=ollama.service
+
+[Service]
+Type=simple
+User={{USER}}
+WorkingDirectory={{WORKDIR}}
+ExecStart={{PYTHON_PATH}} {{WORKDIR}}/run.py
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+Environment=PYTHONUNBUFFERED=1
+
+[Install]
+WantedBy=multi-user.target

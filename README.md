@@ -108,9 +108,25 @@ Para que el agente responda sobre la documentación real de tu empresa:
    *El script extraerá el texto, generará los embeddings de 768 dimensiones en CPU y almacenará los vectores directamente en la tabla `KNOWLEDGE_BASE` de tu Oracle Database 26ai.*
 
 ### 5. Iniciar el Servidor de Soporte
+
+#### Opción A: Ejecución Directa en Primer Plano
 ```bash
 python3 run.py
 ```
+
+#### Opción B: Servicio en Segundo Plano para Producción (systemd)
+Si deseas que el agente corra de forma autónoma, arranque tras reinicios y se administre como servicio del sistema operativo:
+
+```bash
+# Registrar y arrancar el servicio en segundo plano
+sudo python3 scripts/setup_systemd_service.py
+```
+
+*Comandos para administrar el servicio:*
+* **Ver estado:** `sudo systemctl status oracle-vectordesk`
+* **Ver logs en tiempo real:** `sudo journalctl -u oracle-vectordesk -f`
+* **Reiniciar servicio:** `sudo systemctl restart oracle-vectordesk`
+* **Detener servicio:** `sudo systemctl stop oracle-vectordesk`
 
 ---
 
@@ -182,7 +198,11 @@ Oracle-VectorDesk/
 ├── scripts/                      # Herramientas operativas
 │   ├── generate_demo_pdfs.py     # Generador de 10 PDFs de prueba con ReportLab
 │   ├── ingest_documents.py       # Ingesta y vectorización de PDFs propios o demo
-│   └── run_benchmark.py          # Evaluador automatizado de 20 preguntas
+│   ├── run_benchmark.py          # Evaluador automatizado de 20 preguntas
+│   └── setup_systemd_service.py  # Instalador del servicio systemd en segundo plano
+│
+├── service/                      # Plantillas de servicios del sistema operativo
+│   └── oracle-vectordesk.service.template
 │
 ├── data/                         # Datasets y documentos
 │   ├── documents/                # 📂 Directorio para subir PDFs del cliente
