@@ -210,6 +210,17 @@ python3 scripts/reset_database.py
 ```
 > **Nota:** El asistente `python3 install.py` también detecta automáticamente si las tablas ya existen en el esquema y te permite elegir interactivamente entre conservarlas o purgarlas para una instalación limpia.
 
+### 🗑️ Desinstalación y Desaprovisionamiento Completo (`uninstall.py`)
+Si deseas desinstalar la solución por completo y restaurar la máquina y la base de datos a su estado original:
+```bash
+python3 uninstall.py
+```
+> Permite de forma interactiva y modular:
+> * Detener y desinstalar el servicio systemd (`oracle-vectordesk.service`).
+> * Purgar las tablas vectoriales o eliminar completamente el usuario en Oracle 26ai (`DROP USER ... CASCADE` vía SSH).
+> * Eliminar los modelos LLM descargados (`qwen3:4b`, etc.) o desinstalar completamente el servicio y binario de Ollama.
+> * Limpiar archivos `.env`, datasets demo y cachés locales.
+
 ---
 
 ## 📂 Estructura del Proyecto
@@ -246,6 +257,7 @@ Oracle-VectorDesk/
 │   └── deployment_guide.md       # Manual completo y Troubleshooting
 │
 ├── install.py                    # Asistente interactivo de instalación (Setup Wizard)
+├── uninstall.py                  # Asistente interactivo de desinstalación y limpieza completa
 ├── run.py                        # Script de inicio del servidor FastAPI
 ├── requirements.txt              # Dependencias de Python
 ├── .env.example                  # Plantilla de variables de entorno
