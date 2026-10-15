@@ -70,12 +70,18 @@ A diferencia de soluciones tradicionales de IA que exigen GPUs dedicadas (A100/H
 | :--- | :--- | :---: | :---: |
 | **OCI Compute (AMD E6)** | `VM.Standard.E6.Flex` (2 OCPUs / 4 vCPUs, 32 GB RAM) | 744 hrs / mes | **\$92.26 USD** |
 | **Boot Volume** | 200 GB Balanced (VPU 10) | 744 hrs / mes | **\$8.50 USD** |
-| **Oracle Base Database Service** | Standard Edition (4 ECPUs, 256 GB Storage) | 744 hrs / mes | **\$320.85 USD** |
-| 🚀 **Total Infraestructura Dedicada (Greenfield)** | *Base de Datos 26ai Dedicada + Cómputo E6* | | **\$421.60 USD / mes** |
+| **Subtotal Cómputo + Almacenamiento VM** | *Capa de inferencia CPU y API* | | **\$100.76 USD** |
+| **Opción A: Oracle Base Database Service (VM)** | Standard Edition (4 ECPUs, 256 GB Storage) | 744 hrs / mes | **\$320.85 USD** |
+| **Opción B: Autonomous AI Database (Serverless)** | Workload: *Vector Database* (2 ECPUs, 200 GB Storage) | 744 hrs / mes | **\$177.08 USD** |
+| | | | |
+| 🚀 **Total Greenfield Opción A (VM Base DB + Compute)** | *Base de Datos 26ai en VM dedicada + Cómputo E6* | | **\$421.60 USD / mes** |
+| ⚡ **Total Greenfield Opción B (Autonomous Vector DB + Compute)** | *Autonomous AI Vector Database Serverless + Cómputo E6* | | **\$277.84 USD / mes** |
 | 💡 **Total para Clientes con BD Oracle Existente / BYOL** | *Aprovechando su DB actual ("Bring AI to Data")* | | **\$100.76 USD / mes** |
-| ⚡ **Opción Autonomous Database Serverless (1 ECPU)** | *1 ECPU Serverless + Cómputo E6* | | **~\$195.00 USD / mes** |
 
-> **Nota de Negocio:** Para empresas que ya cuentan con un DBSystem, Autonomous Database o Exadata en OCI, el costo incremental de adoptar Oracle-VectorDesk es únicamente la instancia Compute E6 (**~\$100.76 USD/mes**), amortizando al máximo su inversión actual en licencias y cómputo de base de datos.
+> **Nota de Negocio:** 
+> * **PoC Validado en Laboratorio:** La implementación actual de referencia de este repositorio fue desplegada y validada sobre **Oracle Base Database Service (VM)** con conectividad directa por VCN privada.
+> * **Flexibilidad Multimodelo:** El conector de datos (`src/database.py`) ya incluye soporte nativo para **Oracle Autonomous Database** mediante mTLS (Wallets / `cwallet.sso`), permitiendo a cualquier cliente desplegar sobre Serverless (*Vector Database Workload*) para reducir el costo total a solo **$277.84 USD/mes** con cero mantenimiento de infraestructura.
+> * Para empresas que ya cuentan con un DBSystem o Exadata en OCI, el costo incremental es únicamente la instancia Compute E6 (**~$100.76 USD/mes**).
 
 ### 1. Prerrequisitos en OCI
 * **Base de Datos:** Oracle Database 26ai o 23ai (Base DB Service o Autonomous Database) accesible por la VCN.
