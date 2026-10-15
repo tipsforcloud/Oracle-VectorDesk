@@ -32,32 +32,34 @@ flowchart TD
         User["Usuario / Mesa de Ayuda / Jira / Slack / Teams"]
     end
 
-    subgraph OCI_VCN ["OCI Virtual Cloud Network (VCN Privada)"]
-        subgraph VM_Compute ["OCI Compute E6 (VM.Standard.E6.Flex - 2 OCPUs, 32 GB RAM)"]
-            API["API REST Backend (FastAPI / Uvicorn :8000)"]
-            EmbedModel["Modelo Embeddings CPU<br/>intfloat/multilingual-e5-base (768d)"]
-            Ollama["Motor LLM en CPU (Ollama)<br/>qwen2.5:7b-instruct-q4_K_M"]
-        end
-
-        subgraph Oracle_DB ["Oracle Database 26ai (Base DB o Autonomous DB Serverless)"]
-            KB_Table[("Tabla KNOWLEDGE_BASE<br/>Columna VECTOR(768, FLOAT32)<br/>Exact Vector Search con SIMD")]
-            Audit_Table[("Tabla AGENT_TICKETS_LOG<br/>Auditoría, Métricas y Tiempos")]
-        end
+    subgraph VM_Compute ["OCI Compute E6 (Inferencia y API Backend)"]
+        API["API REST Backend (FastAPI / Uvicorn :8000)"]
+        EmbedModel["Modelo Embeddings CPU (intfloat/multilingual-e5-base 768d)"]
+        Ollama["Motor LLM en CPU (qwen2.5:7b-instruct-q4_K_M)"]
     end
 
-    User -->|"POST /api/v1/support/resolve"| API
-    API -->|"1. Vectoriza consulta: query..."| EmbedModel
-    EmbedModel -->|"Vector float32 (768d)"| API
-    API -->|"2. SQL con VECTOR_DISTANCE(..., COSINE)"| KB_Table
-    KB_Table -->|"3. Top 3 artículos + similitud"| API
+    subgraph Oracle_DB ["Oracle Database 26ai (Vector Store en VCN)"]
+        KB_Table[("Tabla KNOWLEDGE_BASE (Columna VECTOR 768d SIMD)")]
+        Audit_Table[("Tabla AGENT_TICKETS_LOG (Auditoría y Métricas)")]
+    end
+
+    subgraph Soporte_Humano ["Escalamiento Nivel 2"]
+        Escalar["Mesa de Ayuda Humana (Safe Fallback)"]
+    end
+
+    User -->|"1. POST /api/v1/support/resolve"| API
+    API -->|"2. Vectorizar consulta"| EmbedModel
+    EmbedModel -->|"3. Vector Float32 (768d)"| API
+    API -->|"4. SQL con VECTOR_DISTANCE(..., COSINE)"| KB_Table
+    KB_Table -->|"5. Top 3 artículos + similitud"| API
     
-    API -->|"Similitud < 0.35 (Fallback)"| Escalar["Escalar a Humano (Safe Fallback)"]
-    Escalar --> User
+    API -->|"Similitud menor a 0.35"| Escalar
+    Escalar -->|"Transferencia de caso"| User
     
-    API -->|"4. Prompt estricto + Contexto recuperado"| Ollama
-    Ollama -->|"5. Respuesta resolutiva precisa"| API
-    API -->|"6. Inserta log de auditoría"| Audit_Table
-    API -->|"7. JSON con respuesta + fuentes"| User
+    API -->|"6. Prompt estricto + Contexto recuperado"| Ollama
+    Ollama -->|"7. Respuesta generada"| API
+    API -->|"8. Registro de auditoría"| Audit_Table
+    API -->|"9. Respuesta JSON con fuentes"| User
 ```
 
 ---
