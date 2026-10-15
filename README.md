@@ -35,29 +35,29 @@ flowchart TD
     subgraph OCI_VCN ["OCI Virtual Cloud Network (VCN Privada)"]
         subgraph VM_Compute ["OCI Compute E6 (VM.Standard.E6.Flex - 2 OCPUs, 32 GB RAM)"]
             API["API REST Backend (FastAPI / Uvicorn :8000)"]
-            EmbedModel["Modelo Embeddings CPU\nintfloat/multilingual-e5-base (768d)"]
-            Ollama["Motor LLM en CPU (Ollama)\nqwen2.5:7b-instruct-q4_K_M"]
+            EmbedModel["Modelo Embeddings CPU<br/>intfloat/multilingual-e5-base (768d)"]
+            Ollama["Motor LLM en CPU (Ollama)<br/>qwen2.5:7b-instruct-q4_K_M"]
         end
 
         subgraph Oracle_DB ["Oracle Database 26ai (Base DB o Autonomous DB Serverless)"]
-            KB_Table[("Tabla KNOWLEDGE_BASE\nColumna VECTOR(768, FLOAT32)\nExact Vector Search con SIMD")]
-            Audit_Table[("Tabla AGENT_TICKETS_LOG\nAuditoría, Métricas y Tiempos")]
+            KB_Table[("Tabla KNOWLEDGE_BASE<br/>Columna VECTOR(768, FLOAT32)<br/>Exact Vector Search con SIMD")]
+            Audit_Table[("Tabla AGENT_TICKETS_LOG<br/>Auditoría, Métricas y Tiempos")]
         end
     end
 
-    User -->|POST /api/v1/support/resolve| API
-    API -->|1. Vectoriza consulta 'query: ...'| EmbedModel
-    EmbedModel -->|Vector float32[768]| API
-    API -->|2. SQL con VECTOR_DISTANCE(..., COSINE)| KB_Table
-    KB_Table -->|3. Top 3 artículos + similitud| API
+    User -->|"POST /api/v1/support/resolve"| API
+    API -->|"1. Vectoriza consulta: query..."| EmbedModel
+    EmbedModel -->|"Vector float32 (768d)"| API
+    API -->|"2. SQL con VECTOR_DISTANCE(..., COSINE)"| KB_Table
+    KB_Table -->|"3. Top 3 artículos + similitud"| API
     
-    API -->|¿Similitud < 0.35?| Escalar["Escalar a Humano (Safe Fallback)"]
+    API -->|"Similitud < 0.35 (Fallback)"| Escalar["Escalar a Humano (Safe Fallback)"]
     Escalar --> User
     
-    API -->|4. Prompt estricto + Contexto recuperado| Ollama
-    Ollama -->|5. Respuesta resolutiva precisa| API
-    API -->|6. Inserta log de auditoría| Audit_Table
-    API -->|7. JSON con respuesta + fuentes| User
+    API -->|"4. Prompt estricto + Contexto recuperado"| Ollama
+    Ollama -->|"5. Respuesta resolutiva precisa"| API
+    API -->|"6. Inserta log de auditoría"| Audit_Table
+    API -->|"7. JSON con respuesta + fuentes"| User
 ```
 
 ---
