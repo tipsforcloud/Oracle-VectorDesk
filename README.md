@@ -95,7 +95,19 @@ pip3 install --break-system-packages torch --index-url https://download.pytorch.
 python3 install.py
 ```
 
-### 4. Iniciar el Servidor de Soporte
+### 4. Cargar tus Propios Documentos PDF (Producción)
+Para que el agente responda sobre la documentación real de tu empresa:
+1. Copia tus archivos `.pdf` en la carpeta `data/documents/`:
+   ```bash
+   cp /ruta/a/tus/manuales/*.pdf data/documents/
+   ```
+2. Ejecuta el script de ingesta:
+   ```bash
+   python3 scripts/ingest_documents.py
+   ```
+   *El script extraerá el texto, generará los embeddings de 768 dimensiones en CPU y almacenará los vectores directamente en la tabla `KNOWLEDGE_BASE` de tu Oracle Database 26ai.*
+
+### 5. Iniciar el Servidor de Soporte
 ```bash
 python3 run.py
 ```
@@ -169,12 +181,13 @@ Oracle-VectorDesk/
 │
 ├── scripts/                      # Herramientas operativas
 │   ├── generate_demo_pdfs.py     # Generador de 10 PDFs de prueba con ReportLab
-│   ├── ingest_documents.py       # Ingesta y vectorización de PDFs con pypdf
+│   ├── ingest_documents.py       # Ingesta y vectorización de PDFs propios o demo
 │   └── run_benchmark.py          # Evaluador automatizado de 20 preguntas
 │
 ├── data/                         # Datasets y documentos
-│   ├── benchmark_questions.json  # Preguntas de benchmark
-│   └── demo_docs/                # Almacén de PDFs generados
+│   ├── documents/                # 📂 Directorio para subir PDFs del cliente
+│   ├── demo_docs/                # Almacén de PDFs de demostración
+│   └── benchmark_questions.json  # 20 preguntas de evaluación
 │
 ├── docs/                         # Documentación técnica
 │   └── deployment_guide.md       # Manual completo y Troubleshooting

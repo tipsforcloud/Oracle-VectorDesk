@@ -159,19 +159,29 @@ def check_ollama_service():
         print("      Asegúrate de instalarlo con: curl -fsSL https://ollama.com/install.sh | sh")
 
 
-def generate_and_ingest_demo():
-    print("\n[5/5] Generación e Ingesta de Documentación Demo...")
-    do_demo = input("  ¿Deseas generar los 10 documentos PDF y vectorizarlos en Oracle 26ai ahora? [S/n]: ").strip().lower()
-    if do_demo != 'n':
-        # 1. Generar PDFs
-        print("  Generando 10 documentos PDF en data/demo_docs/...")
+def setup_knowledge_base():
+    print("\n[5/5] Ingesta de Documentos a la Base de Conocimiento...")
+    print("  Selecciona cómo deseas inicializar el conocimiento:")
+    print("  1) Generar y cargar los 10 documentos PDF de demostración (Recomendado para pruebas iniciales).")
+    print("  2) Ingestar mis propios documentos PDF colocados en 'data/documents/'.")
+    print("  3) Omitir por ahora (subiré mis archivos PDF más tarde).")
+
+    choice = input("  Selecciona una opción [1/2/3, por defecto 3]: ").strip()
+    if choice == "1":
+        print("\n  Generando 10 documentos PDF en data/demo_docs/...")
         gen_script = BASE_DIR / "scripts" / "generate_demo_pdfs.py"
         subprocess.check_call([sys.executable, str(gen_script)])
 
-        # 2. Ingestar
-        print("\n  Iniciando vectorización e ingesta a Oracle Database 26ai...")
+        print("\n  Vectorizando e ingestando demo PDFs en Oracle Database 26ai...")
+        ingest_script = BASE_DIR / "scripts" / "ingest_documents.py"
+        subprocess.check_call([sys.executable, str(ingest_script), "--demo"])
+    elif choice == "2":
+        print("\n  Iniciando ingesta de documentos propios desde 'data/documents/'...")
         ingest_script = BASE_DIR / "scripts" / "ingest_documents.py"
         subprocess.check_call([sys.executable, str(ingest_script)])
+    else:
+        print("  [✓] Ingesta omitida. Puedes colocar tus archivos PDF en 'data/documents/' en cualquier momento")
+        print("      y ejecutar: python3 scripts/ingest_documents.py")
 
 
 def main():
@@ -180,7 +190,7 @@ def main():
     user, password, dsn = setup_database_config()
     execute_sql_initialization(user, password, dsn)
     check_ollama_service()
-    generate_and_ingest_demo()
+    setup_knowledge_base()
 
     print("\n================================================================================")
     print(" ¡DESPLIEGUE Y CONFIGURACIÓN COMPLETADOS CON ÉXITO! ")

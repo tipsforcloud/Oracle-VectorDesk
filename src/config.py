@@ -37,6 +37,7 @@ SIMILARITY_THRESHOLD = float(os.getenv("SIMILARITY_THRESHOLD", "0.35"))
 
 # Rutas de Datos y Documentos
 DATA_DIR = BASE_DIR / "data"
+DOCUMENTS_DIR = DATA_DIR / "documents"
 DEMO_DOCS_DIR = DATA_DIR / "demo_docs"
 BENCHMARK_FILE = DATA_DIR / "benchmark_questions.json"
 SQL_INIT_FILE = BASE_DIR / "sql" / "init_db.sql"
