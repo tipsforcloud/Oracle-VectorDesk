@@ -81,7 +81,10 @@ def run_benchmark(limit=None):
             resolved_count += 1
             status_tag = "🟢 AUTO-RESUELTO CON RAG"
 
-        print(f"Resultado: {status_tag} | Similitud: {score:.4f} | Tiempo: {latency_ms:,} ms")
+        tps = data.get("tokens_per_second")
+        toks = data.get("tokens_generated")
+        telemetry_str = f" | Velocidad: {tps} tok/s ({toks} tokens)" if tps else ""
+        print(f"Resultado: {status_tag} | Similitud: {score:.4f} | Tiempo: {latency_ms:,} ms{telemetry_str}")
         if sources:
             source_titles = [f"{s.get('title')} ({s.get('similarity', 0):.2f})" for s in sources]
             print(f"Fuentes Oracle 26ai: {' | '.join(source_titles)}")

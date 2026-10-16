@@ -255,7 +255,9 @@ curl -X POST http://localhost:8000/api/v1/support/resolve \
       "similarity": 0.8807
     }
   ],
-  "execution_time_ms": 32150
+  "execution_time_ms": 2850,
+  "tokens_generated": 85,
+  "tokens_per_second": 29.82
 }
 ```
 

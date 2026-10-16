@@ -26,6 +26,8 @@ class TicketResponse(BaseModel):
     confidence_score: float
     sources: List[SourceItem]
     execution_time_ms: int
+    tokens_generated: Optional[int] = Field(default=None, description="Total de tokens generados por el LLM")
+    tokens_per_second: Optional[float] = Field(default=None, description="Velocidad de generación en tokens por segundo")
 
 
 class HealthResponse(BaseModel):

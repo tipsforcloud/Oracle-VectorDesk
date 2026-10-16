@@ -120,7 +120,9 @@ Ocurre cuando la documentación en Oracle 26ai tiene respaldo suficiente para co
       "similarity": 0.6124
     }
   ],
-  "execution_time_ms": 4820
+  "execution_time_ms": 2820,
+  "tokens_generated": 84,
+  "tokens_per_second": 29.79
 }
 ```
 
@@ -134,7 +136,9 @@ Ocurre cuando la consulta del usuario no tiene respaldo documental verificado en
   "suggested_resolution": "No se encontró documentación suficiente en la base de conocimiento para resolver este ticket automáticamente. Se escala a un agente humano de soporte.",
   "confidence_score": 0.1824,
   "sources": [],
-  "execution_time_ms": 140
+  "execution_time_ms": 140,
+  "tokens_generated": 0,
+  "tokens_per_second": 0.0
 }
 ```
 

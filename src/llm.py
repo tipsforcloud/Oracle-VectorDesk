@@ -52,12 +52,24 @@ def generate_support_resolution(user_query: str, retrieved_context: str) -> str:
                 f"Descárgalo ejecutando en la terminal: 'ollama pull {OLLAMA_MODEL}'. "
                 f"Detalle: {err_msg or 'Model not found'}"
             )
-        response.raise_for_status()
         data = response.json()
         raw_text = data.get("response", "").strip()
         # Eliminar posibles bloques de razonamiento interno <think>...</think> si el modelo los emite
         clean_text = re.sub(r"<think>.*?</think>", "", raw_text, flags=re.DOTALL).strip()
-        return clean_text if clean_text else raw_text
+        final_text = clean_text if clean_text else raw_text
+
+        # Extraer métricas de telemetría de Ollama
+        eval_count = data.get("eval_count", 0)
+        eval_duration_ns = data.get("eval_duration", 0)
+        eval_seconds = eval_duration_ns / 1e9 if eval_duration_ns > 0 else 0.0
+        tokens_per_second = round(eval_count / eval_seconds, 2) if eval_seconds > 0 else 0.0
+
+        metrics = {
+            "tokens_generated": eval_count,
+            "tokens_per_second": tokens_per_second,
+            "eval_duration_ms": int(eval_duration_ns / 1e6) if eval_duration_ns > 0 else 0
+        }
+        return final_text, metrics
 
     except requests.exceptions.ConnectionError:
         raise RuntimeError(

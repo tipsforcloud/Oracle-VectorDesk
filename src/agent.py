@@ -82,7 +82,9 @@ def resolve_ticket(payload: TicketRequest):
             suggested_resolution=fallback_msg,
             confidence_score=round(top_score, 4),
             sources=[],
-            execution_time_ms=elapsed_ms
+            execution_time_ms=elapsed_ms,
+            tokens_generated=0,
+            tokens_per_second=0.0
         )
 
     # 4. Ensamblar contexto recuperado
@@ -99,7 +101,7 @@ def resolve_ticket(payload: TicketRequest):
 
     # 5. Generar resolución con LLM en CPU (Ollama)
     try:
-        llm_resolution = generate_support_resolution(payload.user_query, combined_context)
+        llm_resolution, llm_metrics = generate_support_resolution(payload.user_query, combined_context)
     except Exception as e:
         raise HTTPException(status_code=502, detail=str(e))
 
@@ -122,5 +124,7 @@ def resolve_ticket(payload: TicketRequest):
         suggested_resolution=llm_resolution,
         confidence_score=round(top_score, 4),
         sources=sources,
-        execution_time_ms=elapsed_ms
+        execution_time_ms=elapsed_ms,
+        tokens_generated=llm_metrics.get("tokens_generated"),
+        tokens_per_second=llm_metrics.get("tokens_per_second")
     )
