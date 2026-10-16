@@ -43,17 +43,42 @@ def ask_input(prompt: str, default: str = "") -> str:
                 return res
 
 
-def ensure_oracle_instant_client():
-    """Verifica e instala Oracle Instant Client para habilitar Modo Thick y soporte de cifrado nativo."""
-    print("\n  Verificando Oracle Instant Client (Modo Thick)...")
+def find_oracle_client_lib_dir():
+    """Busca directorios comunes donde se instala Oracle Instant Client en Linux."""
+    import glob
+    candidates = glob.glob("/usr/lib/oracle/*/client64/lib") + glob.glob("/opt/oracle/instantclient*")
+    if candidates:
+        candidates.sort(reverse=True)
+        return candidates[0]
+    return None
+
+
+def init_thick_client():
+    """Intenta inicializar Modo Thick de python-oracledb buscando en rutas conocidas si es necesario."""
     try:
         import oracledb
         oracledb.init_oracle_client()
-        print("  [✓] Oracle Instant Client detectado y activo (Modo Thick habilitado).")
         return True
     except Exception as e:
-        if "already been initialized" in str(e):
+        if "already been initialized" in str(e).lower():
             return True
+        lib_dir = find_oracle_client_lib_dir()
+        if lib_dir:
+            try:
+                import oracledb
+                oracledb.init_oracle_client(lib_dir=lib_dir)
+                return True
+            except Exception:
+                pass
+    return False
+
+
+def ensure_oracle_instant_client():
+    """Verifica e instala Oracle Instant Client para habilitar Modo Thick y soporte de cifrado nativo."""
+    print("\n  Verificando Oracle Instant Client (Modo Thick)...")
+    if init_thick_client():
+        print("  [✓] Oracle Instant Client detectado y activo (Modo Thick habilitado).")
+        return True
 
     if sys.platform != "linux":
         print("  [i] Plataforma no Linux. Para habilitar Modo Thick, instala Oracle Instant Client manualmente.")
@@ -77,21 +102,63 @@ def ensure_oracle_instant_client():
 
     if shutil.which("dnf"):
         try:
-            print(f"     Habilitando repositorio oficial de Instant Client (Oracle Linux {el_ver})...")
-            subprocess.run(["sudo", "dnf", "install", "-y", f"oracle-instantclient-release-el{el_ver}"], capture_output=True)
-            print("     Instalando paquete oracle-instantclient-basic...")
-            res = subprocess.run(["sudo", "dnf", "install", "-y", "oracle-instantclient-basic"])
-            if res.returncode == 0:
-                print("  [✓] Oracle Instant Client instalado exitosamente.")
-                try:
-                    import oracledb
-                    oracledb.init_oracle_client()
-                    print("  [✓] Modo Thick de Oracle inicializado correctamente.")
+            # Lista priorizada de paquetes de repositorio según versión de Oracle Linux
+            if el_ver == "10":
+                repo_candidates = [
+                    "oracle-instantclient-release-26ai-el10",
+                    "oracle-instantclient-release-23ai-el10",
+                    "oracle-instantclient-release-el10",
+                ]
+            elif el_ver == "9":
+                repo_candidates = [
+                    "oracle-instantclient-release-23ai-el9",
+                    "oracle-instantclient-release-26ai-el9",
+                    "oracle-instantclient-release-el9",
+                ]
+            else:  # el_ver == "8"
+                repo_candidates = [
+                    "oracle-instantclient-release-23ai-el8",
+                    "oracle-instantclient-release-el8",
+                ]
+
+            repo_installed = False
+            for repo_pkg in repo_candidates:
+                print(f"     Habilitando repositorio oficial: {repo_pkg}...")
+                res_repo = subprocess.run(["sudo", "dnf", "install", "-y", repo_pkg], capture_output=True, text=True)
+                if res_repo.returncode == 0:
+                    print(f"  [✓] Repositorio {repo_pkg} habilitado exitosamente.")
+                    repo_installed = True
+                    break
+
+            if not repo_installed:
+                print("  [!] Aviso: No se pudo habilitar un repo específico por nombre; probando instalación directa de paquetes...")
+
+            # Lista priorizada de paquetes cliente básico
+            basic_candidates = [
+                "oracle-instantclient-basic",
+                f"oracle-instantclient{ '26ai' if el_ver == '10' else '23ai' }-basic",
+                "oracle-instantclient23ai-basic",
+                "oracle-instantclient26ai-basic",
+            ]
+            client_installed = False
+            for basic_pkg in basic_candidates:
+                print(f"     Instalando paquete {basic_pkg}...")
+                res_pkg = subprocess.run(["sudo", "dnf", "install", "-y", basic_pkg])
+                if res_pkg.returncode == 0:
+                    print(f"  [✓] Paquete {basic_pkg} instalado exitosamente.")
+                    client_installed = True
+                    break
+
+            if client_installed:
+                # Actualizar caché de librerías del sistema
+                subprocess.run(["sudo", "ldconfig"], capture_output=True)
+                if init_thick_client():
+                    print("  [✓] Modo Thick de Oracle inicializado y verificado correctamente.")
                     return True
-                except Exception as init_err:
-                    print(f"  [!] Nota al inicializar cliente C: {init_err}")
+                else:
+                    print("  [!] Cliente instalado, pero Modo Thick requiere reinicio de sesión o configurar LD_LIBRARY_PATH.")
             else:
-                print("  [!] Advertencia: No se pudo instalar el paquete con dnf.")
+                print("  [!] Advertencia: No se pudo instalar el paquete de Instant Client con dnf.")
         except Exception as dnf_err:
             print(f"  [!] Error ejecutando dnf: {dnf_err}")
 

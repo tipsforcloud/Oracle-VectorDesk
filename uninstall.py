@@ -25,8 +25,17 @@ sys.path.insert(0, str(BASE_DIR))
 try:
     import oracledb
     oracledb.init_oracle_client()
-except Exception:
-    pass
+except Exception as _e:
+    if "already been initialized" not in str(_e).lower():
+        import glob
+        _candidates = glob.glob("/usr/lib/oracle/*/client64/lib") + glob.glob("/opt/oracle/instantclient*")
+        if _candidates:
+            _candidates.sort(reverse=True)
+            try:
+                import oracledb
+                oracledb.init_oracle_client(lib_dir=_candidates[0])
+            except Exception:
+                pass
 
 
 def print_banner():
