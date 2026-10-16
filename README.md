@@ -3,7 +3,8 @@
 [![Oracle Database](https://img.shields.io/badge/Oracle_Database-26ai_|_23ai-F80000?logo=oracle&logoColor=white)](https://www.oracle.com/database/)
 [![Oracle Cloud Infrastructure](https://img.shields.io/badge/OCI-Compute_E6_(CPU--only)-F80000?logo=oracle&logoColor=white)](https://cloud.oracle.com)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
-[![Ollama](https://img.shields.io/badge/Ollama-Qwen_2.5_7B-000000?logo=ollama&logoColor=white)](https://ollama.com)
+[![Ollama](https://img.shields.io/badge/Ollama-Qwen3_4B-000000?logo=ollama&logoColor=white)](https://ollama.com)
+[![API Docs](https://img.shields.io/badge/API_Docs-Swagger_|_ReDoc-blue?logo=openapi-initiative&logoColor=white)](docs/api_reference.md)
 [![Embeddings](https://img.shields.io/badge/Embeddings-multilingual--e5--base_(768d)-blue)](https://huggingface.co/intfloat/multilingual-e5-base)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
@@ -154,15 +155,31 @@ sudo python3 scripts/setup_systemd_service.py
 
 ---
 
-## 🧪 Pruebas y Validación de la API
+## 📡 Documentación y Especificación de la API REST
 
-### 📖 Documentación Interactiva (Swagger UI & ReDoc)
-FastAPI expone documentación web interactiva lista para probar los endpoints en vivo:
-* **Swagger UI (Consola interactiva):** `http://<IP_DE_LA_VM>:8000/docs`
-* **ReDoc (Documentación técnica):** `http://<IP_DE_LA_VM>:8000/redoc`
-* **Referencia Completa:** Consulta la [Guía de Referencia de la API REST](docs/api_reference.md) para esquemas JSON, códigos de error y ejemplos en Python y Node.js.
+El agente expone una API REST moderna de alta velocidad construida con **FastAPI**, persistencia transaccional y documentación interactiva lista para producción:
 
-### Probar Salud del Servicio
+> 📘 **Especificación Técnica Completa:** Consulta la [Guía de Referencia de la API REST (docs/api_reference.md)](docs/api_reference.md) para conocer en detalle los contratos JSON, manejo de errores, códigos de respuesta HTTP y ejemplos de integración listos para copiar en **Python**, **JavaScript** y **cURL**.
+
+### 🖥️ Consola Interactiva en Vivo (Swagger UI & ReDoc)
+Al estar en ejecución el backend en el puerto `8000`, puedes acceder directamente desde tu navegador:
+* **Swagger UI (Pruebas interactivas en vivo):** `http://<IP_DE_LA_VM>:8000/docs`
+* **ReDoc (Documentación técnica estructurada):** `http://<IP_DE_LA_VM>:8000/redoc`
+* **OpenAPI Schema (JSON crudo):** `http://<IP_DE_LA_VM>:8000/openapi.json`
+
+### 📋 Catálogo de Endpoints:
+
+| Método | Endpoint | Descripción | Payload de Entrada | Esquema de Respuesta |
+| :---: | :--- | :--- | :---: | :---: |
+| `GET` | `/health` | Chequeo de salud del servicio, versión de BD y modelo LLM activo. | *Ninguno* | `HealthResponse` |
+| `POST` | `/api/v1/support/resolve` | Resolución RAG de tickets con búsqueda vectorial nativa y Safe Fallback. | `{"user_query": "..."}` | `TicketResponse` |
+| `GET` | `/docs` | Consola interactiva Swagger UI para explorar y probar peticiones. | *Navegador web* | HTML interactivo |
+
+---
+
+## 🧪 Pruebas y Validación Práctica
+
+### 1. Probar Salud del Servicio (`GET /health`)
 ```bash
 curl http://localhost:8000/health
 ```
