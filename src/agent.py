@@ -3,6 +3,7 @@ API REST y Orquestador del Agente de Soporte RAG
 Expone endpoints de resolución de tickets con búsqueda vectorial en Oracle Database 26ai.
 """
 
+import re
 import time
 from fastapi import FastAPI, HTTPException
 from src.config import DB_DSN, OLLAMA_MODEL, EMBEDDING_MODEL_NAME, SIMILARITY_THRESHOLD
@@ -16,6 +17,39 @@ app = FastAPI(
     description="Agente de Soporte RAG con Oracle Database 26ai e Inferencia en CPU",
     version="2.0.0"
 )
+
+
+def is_pure_greeting(query: str) -> bool:
+    """Detecta si la consulta del usuario es un saludo o cortesía conversacional."""
+    clean = re.sub(r"[^\w\s]", "", query.lower()).strip()
+    if not clean:
+        return False
+
+    greetings = {
+        "hola", "buenas", "buenos dias", "buenos días", "buenas tardes",
+        "buenas noches", "saludos", "que tal", "qué tal", "como estas",
+        "cómo estás", "como te va", "cómo te va", "hey", "hello", "hi",
+        "hola como estas", "hola cómo estás", "hola que tal", "hola qué tal",
+        "hola buenos dias", "hola buenos días", "hola buenas tardes",
+        "hola buenas noches", "buen dia", "buen día"
+    }
+    if clean in greetings:
+        return True
+
+    words = clean.split()
+    if len(words) <= 4:
+        starts_greeting = words[0] in ["hola", "buenas", "saludos", "hey", "hello", "hi"] or (
+            len(words) >= 2 and words[0] == "buen" and words[1] in ["dia", "día"]
+        )
+        technical_keywords = [
+            "error", "fallo", "problema", "pin", "telefono", "teléfono", "vpn",
+            "sap", "pass", "contraseña", "ticket", "ayuda", "acceso", "soporte",
+            "como", "cómo", "solicitar", "solicitud", "bloqueo", "desbloqueo"
+        ]
+        if starts_greeting and not any(kw in clean for kw in technical_keywords):
+            return True
+
+    return False
 
 
 @app.get("/health", response_model=HealthResponse)
@@ -45,6 +79,34 @@ def resolve_ticket(payload: TicketRequest):
     y sintetiza la solución con el modelo LLM local en CPU.
     """
     start_time = time.time()
+
+    # 0. Detección de Saludos y Cortesía Conversacional (Small-Talk)
+    if is_pure_greeting(payload.user_query):
+        elapsed_ms = int((time.time() - start_time) * 1000)
+        greeting_msg = (
+            "¡Hola! 👋 Qué gusto saludarte. Soy tu asistente inteligente de soporte técnico y helpdesk corporativo, "
+            "impulsado por Oracle Database 26ai. Estoy aquí para guiarte paso a paso con incidencias, accesos, "
+            "procedimientos de TI y políticas de la empresa. ¿En qué te puedo colaborar el día de hoy?"
+        )
+        log_ticket_resolution(
+            ticket_id=payload.ticket_id,
+            user_query=payload.user_query,
+            retrieved_context="Interacción de saludo y bienvenida.",
+            agent_response=greeting_msg,
+            confidence_score=1.0,
+            status="greeting_chitchat",
+            execution_time_ms=elapsed_ms
+        )
+        return TicketResponse(
+            ticket_id=payload.ticket_id,
+            user_query=payload.user_query,
+            suggested_resolution=greeting_msg,
+            confidence_score=1.0,
+            sources=[],
+            execution_time_ms=elapsed_ms,
+            tokens_generated=0,
+            tokens_per_second=0.0
+        )
 
     # 1. Vectorizar la consulta en CPU
     try:
