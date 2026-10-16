@@ -63,36 +63,6 @@ def load_local_env():
     return env_vars
 
 
-def run_ssh_command(ssh_host: str, ssh_user: str, ssh_key: str, command: str):
-    cmd = ["ssh", "-o", "StrictHostKeyChecking=no", "-o", "ConnectTimeout=10"]
-    if ssh_key:
-        key_p = Path(ssh_key).expanduser()
-        if key_p.exists():
-            cmd.extend(["-i", str(key_p)])
-    cmd.append(f"{ssh_user}@{ssh_host}")
-    cmd.append(command)
-    try:
-        res = subprocess.run(cmd, capture_output=True, text=True, timeout=90)
-        return (res.returncode == 0), (res.stdout + "\n" + res.stderr).strip()
-    except Exception as e:
-        return False, str(e)
-
-
-def run_ssh_sysdba_sql(ssh_host: str, ssh_user: str, ssh_key: str, pdb_name: str, sql_commands: str):
-    pdb_clean = pdb_name.split(".")[0].upper()
-    full_sql = f"""
-ALTER SESSION SET CONTAINER = {pdb_clean};
-{sql_commands}
-EXIT;
-"""
-    remote_sh = f"""sudo su - oracle -c "sqlplus -s / as sysdba << 'EOF'
-SET PAGESIZE 0 FEEDBACK OFF VERIFY OFF HEADING OFF ECHO OFF
-{full_sql}
-EOF"
-"""
-    return run_ssh_command(ssh_host, ssh_user, ssh_key, remote_sh)
-
-
 def uninstall_systemd_service():
     print("\n[1/4] Removiendo Servicio del Sistema Operativo (systemd)...")
     if sys.platform != "linux":
@@ -156,34 +126,42 @@ def clean_oracle_database(env_vars: dict):
     wallet_dir = env_vars.get("WALLET_DIR", None)
     wallet_password = env_vars.get("WALLET_PASSWORD", None)
 
-    default_host = default_dsn.split(":")[0] if ":" in default_dsn else ""
-    default_pdb = default_dsn.split("/")[-1].split(".")[0].upper() if "/" in default_dsn else "FREEPDB1"
+    prompt_dsn = "  DSN de Conexión"
+    if not default_dsn:
+        prompt_dsn += " (ej. dbhost.sub.yourvcn.oraclevcn.com:1521/pdb1.sub.yourvcn.oraclevcn.com)"
+    dsn = ask_input(prompt_dsn, default_dsn)
 
     if action == "2":
-        # Opción DROP USER CASCADE requiere privilegios SYSDBA o SSH
+        # Opción DROP USER CASCADE ejecutado vía SQL*Net con usuario administrativo
         print("\n  -- Borrado Completo de Usuario (DROP USER CASCADE) --")
-        use_ssh = input("  ¿Deseas ejecutar el borrado vía SSH conectándote como SYSDBA al DBSystem? [S/n]: ").strip().lower()
-        if use_ssh != 'n':
-            prompt_host = "  Host / FQDN o IP del DBSystem"
-            if not default_host:
-                prompt_host += " (ej. 10.0.1.15 o dbhost.sub.yourvcn.oraclevcn.com)"
-            ssh_host = ask_input(prompt_host, default_host)
-            ssh_user = ask_input("  Usuario SSH", "opc")
-            ssh_key = ask_input("  Ruta a la llave SSH", "~/.ssh/id_rsa")
-            pdb_name = ask_input("  Nombre de la PDB", default_pdb)
-            user_to_drop = ask_input("  Usuario a eliminar", default_user)
+        dba_user = ask_input("  Usuario con permisos DBA en la PDB (ej. SYSTEM o ADMIN)", "SYSTEM")
+        dba_password = getpass.getpass("  Contraseña del Usuario DBA: ")
+        user_to_drop = ask_input("  Usuario a eliminar", default_user)
 
-            confirm = input(f"  ¿Confirmas ejecutar 'DROP USER {user_to_drop} CASCADE' en {pdb_name}? [s/N]: ").strip().lower()
-            if confirm == 's':
-                drop_sql = f"DROP USER {user_to_drop} CASCADE;"
-                ok, out = run_ssh_sysdba_sql(ssh_host, ssh_user, ssh_key, pdb_name, drop_sql)
-                if ok:
-                    print(f"  [✓] Usuario '{user_to_drop}' eliminado completamente (CASCADE).")
-                else:
-                    print(f"  [!] Error al eliminar usuario: {out}")
-            else:
-                print("  Operación de borrado de usuario cancelada.")
-            return
+        confirm = input(f"  ¿Confirmas ejecutar 'DROP USER {user_to_drop} CASCADE' en {dsn}? [s/N]: ").strip().lower()
+        if confirm == 's':
+            try:
+                import oracledb
+                connect_kwargs = {
+                    "user": dba_user,
+                    "password": dba_password,
+                    "dsn": dsn
+                }
+                if wallet_dir:
+                    connect_kwargs["wallet_location"] = wallet_dir
+                    if wallet_password:
+                        connect_kwargs["wallet_password"] = wallet_password
+
+                conn = oracledb.connect(**connect_kwargs)
+                cur = conn.cursor()
+                cur.execute(f"DROP USER {user_to_drop} CASCADE")
+                conn.close()
+                print(f"  [✓] Usuario '{user_to_drop}' y sus tablas eliminados exitosamente (CASCADE).")
+            except Exception as e:
+                print(f"  [!] Error al eliminar usuario por SQL: {e}")
+        else:
+            print("  Operación de borrado de usuario cancelada.")
+        return
 
     # Opción 1: Borrar tablas KNOWLEDGE_BASE y AGENT_TICKETS_LOG
     print("\n  -- Purga de Tablas Vectoriales --")
@@ -191,10 +169,6 @@ def clean_oracle_database(env_vars: dict):
     password = env_vars.get("DB_PASSWORD", "")
     if not password:
         password = getpass.getpass("  Contraseña del Usuario DB: ")
-    prompt_dsn = "  DSN de Conexión"
-    if not default_dsn:
-        prompt_dsn += " (ej. dbhost.sub.yourvcn.oraclevcn.com:1521/pdb1.sub.yourvcn.oraclevcn.com)"
-    dsn = ask_input(prompt_dsn, default_dsn)
 
     try:
         import oracledb

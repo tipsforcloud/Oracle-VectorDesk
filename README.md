@@ -108,10 +108,9 @@ cd Oracle-VectorDesk
 ```
 
 ### 3. Ejecutar el Asistente Interactivo de Instalación 🧙‍♂️
-El asistente automatiza la configuración completa y soporta 3 modalidades de base de datos:
-* **Modo 1 (Recomendado para Base DB en VM):** Aprovisionamiento automático conectándose por SSH al DBSystem como `SYSDBA` (crea o valida el usuario `app_support`, asigna privilegios/cuotas, crea las tablas con columnas nativas `VECTOR(768, FLOAT32)` y ajusta `sqlnet.ora`).
-* **Modo 2 (Conexión Directa SQL*Net):** Cuando el esquema `app_support` ya fue creado previamente por un DBA.
-* **Modo 3 (Autonomous AI Database):** Despliegue sobre ADB Serverless con Wallet mTLS.
+El asistente automatiza la configuración completa conectándose a través del protocolo estándar de base de datos **SQL*Net (puerto 1521)**, siguiendo el principio de mínimos privilegios (sin requerir accesos SSH a nivel de sistema operativo):
+* **Modo 1 (Oracle Base Database Service en VM / On-Prem / Contenedor):** Conexión directa TCP con usuario de base de datos en la PDB (con cuota y permisos `CONNECT, RESOURCE, UNLIMITED TABLESPACE`). El asistente detecta tablas existentes, ejecuta el DDL vectorial nativo e indexa el contenido.
+* **Modo 2 (Autonomous AI Database Serverless):** Despliegue sobre ADB Serverless con Wallet mTLS (usuario `ADMIN` o usuario de aplicación).
 
 ```bash
 # Recomendado: instalar PyTorch CPU antes de dependencias pesadas
@@ -241,7 +240,7 @@ python3 uninstall.py
 ```
 > Permite de forma interactiva y modular:
 > * Detener y desinstalar el servicio systemd (`oracle-vectordesk.service`).
-> * Purgar las tablas vectoriales o eliminar completamente el usuario en Oracle 26ai (`DROP USER ... CASCADE` vía SSH).
+> * Purgar las tablas vectoriales o eliminar completamente el usuario en Oracle 26ai (`DROP USER ... CASCADE` vía SQL*Net con usuario DBA).
 > * Eliminar los modelos LLM descargados (`qwen3:4b`, etc.) o desinstalar completamente el servicio y binario de Ollama.
 > * Limpiar archivos `.env`, datasets demo y cachés locales.
 
