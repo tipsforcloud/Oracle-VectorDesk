@@ -21,11 +21,19 @@ app = FastAPI(
 @app.get("/health", response_model=HealthResponse)
 def health_check():
     """Valida el estado operativo de los componentes de la solución."""
+    ollama_ok = False
+    try:
+        import requests
+        r = requests.get("http://localhost:11434/api/tags", timeout=1)
+        ollama_ok = (r.status_code == 200)
+    except Exception:
+        pass
+
     return HealthResponse(
-        status="ok",
+        status="ok" if ollama_ok else "warning_ollama_offline",
         database="Oracle Database 26ai AI Vector Search",
         embedding_model=f"{EMBEDDING_MODEL_NAME} (768 dims)",
-        llm_model=OLLAMA_MODEL,
+        llm_model=f"{OLLAMA_MODEL} ({'online' if ollama_ok else 'offline: servicio inactivo en :11434'})",
         dsn=DB_DSN
     )
 

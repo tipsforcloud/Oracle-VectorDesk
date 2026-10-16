@@ -545,20 +545,55 @@ def execute_sql_initialization(user, password, dsn, wallet_dir=None, wallet_pass
 
 def check_ollama_service():
     print("\n[4/6] Verificando Motor LLM en CPU (Ollama)...")
+    ollama_bin = shutil.which("ollama")
+
+    # Verificar si responde en puerto 11434
+    ollama_active = False
     try:
         import requests
-        resp = requests.get("http://localhost:11434/api/tags", timeout=5)
-        if resp.status_code == 200:
+        resp = requests.get("http://localhost:11434/api/tags", timeout=3)
+        ollama_active = (resp.status_code == 200)
+    except Exception:
+        ollama_active = False
+
+    # Si está instalado pero no responde, ofrecer iniciarlo con systemctl
+    if not ollama_active and ollama_bin and sys.platform == "linux":
+        print("  -> El comando 'ollama' existe pero el servicio no responde en http://localhost:11434.")
+        start_srv = input("     ¿Deseas iniciar y habilitar el servicio de Ollama ahora con systemd? [S/n]: ").strip().lower()
+        if start_srv != 'n':
+            subprocess.run(["sudo", "systemctl", "enable", "--now", "ollama"], capture_output=True)
+            import time
+            time.sleep(2)
+            try:
+                resp = requests.get("http://localhost:11434/api/tags", timeout=3)
+                ollama_active = (resp.status_code == 200)
+            except Exception:
+                ollama_active = False
+
+    if ollama_active:
+        try:
+            import requests
+            resp = requests.get("http://localhost:11434/api/tags", timeout=3)
             models = [m.get("name") for m in resp.json().get("models", [])]
             print(f"  [✓] Servicio Ollama activo. Modelos disponibles: {', '.join(models) if models else 'Ninguno'}")
-            if not any("qwen3" in m.lower() or "qwen2.5" in m.lower() for m in models):
-                print("  [!] Aviso: El modelo 'qwen3:4b' no está descargado.")
-                print("      Ejecuta en consola: ollama pull qwen3:4b")
+            
+            target_model = "qwen3:4b"
+            has_model = any("qwen3" in m.lower() or "qwen2.5" in m.lower() for m in models)
+            if not has_model:
+                print(f"  [!] Aviso: El modelo '{target_model}' no está descargado.")
+                pull_now = input(f"     ¿Deseas descargarlo ahora con 'ollama pull {target_model}'? [S/n]: ").strip().lower()
+                if pull_now != 'n':
+                    print(f"     Descargando {target_model} en segundo plano...")
+                    subprocess.run(["ollama", "pull", target_model])
+                    print(f"  [✓] Modelo '{target_model}' listo para inferencia.")
+        except Exception as e:
+            print(f"  [!] Nota al consultar modelos en Ollama: {e}")
+    else:
+        print("  [!] Advertencia: No se pudo conectar a Ollama en http://localhost:11434.")
+        if not ollama_bin:
+            print("      Instálalo con: curl -fsSL https://ollama.com/install.sh | sh")
         else:
-            print("  [!] Ollama respondió con código no exitoso.")
-    except Exception:
-        print("  [!] No se pudo conectar a Ollama en http://localhost:11434.")
-        print("      Asegúrate de instalarlo con: curl -fsSL https://ollama.com/install.sh | sh")
+            print("      Inicia el servicio ejecutando: sudo systemctl start ollama")
 
 
 def setup_knowledge_base(tracker=None):

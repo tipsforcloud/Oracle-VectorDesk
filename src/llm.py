@@ -48,5 +48,11 @@ def generate_support_resolution(user_query: str, retrieved_context: str) -> str:
         clean_text = re.sub(r"<think>.*?</think>", "", raw_text, flags=re.DOTALL).strip()
         return clean_text if clean_text else raw_text
 
+    except requests.exceptions.ConnectionError:
+        raise RuntimeError(
+            f"No se pudo conectar con Ollama en {OLLAMA_URL} (Connection refused). "
+            "El servicio no está en ejecución. Inícialo con: 'sudo systemctl start ollama' "
+            f"y asegúrate de tener el modelo descargado con: 'ollama pull {OLLAMA_MODEL}'."
+        )
     except requests.exceptions.RequestException as e:
-        raise RuntimeError(f"Error conectando con el motor LLM en Ollama ({OLLAMA_URL}): {str(e)}")
+        raise RuntimeError(f"Error comunicando con el motor LLM en Ollama ({OLLAMA_URL}): {str(e)}")
