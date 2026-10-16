@@ -419,6 +419,7 @@ Oracle-VectorDesk/
 ├── uninstall.py                  # Asistente interactivo de desinstalación y limpieza completa
 ├── run.py                        # Script de inicio del servidor FastAPI
 ├── requirements.txt              # Dependencias de Python
+├── CHANGELOG.md                  # 📜 Registro histórico de versiones y roadmap detallado
 ├── .env.example                  # Plantilla de variables de entorno
 ├── .gitignore                    # Reglas de exclusión de Git
 ├── LICENSE                       # Licencia MIT
@@ -429,11 +430,15 @@ Oracle-VectorDesk/
 
 ## 🗺️ Roadmap y Futuras Mejoras (Próximas Versiones)
 
-El proyecto **Oracle-VectorDesk** evoluciona constantemente. Las siguientes capacidades y optimizaciones están planificadas para las siguientes iteraciones:
+El proyecto **Oracle-VectorDesk** evoluciona constantemente. Consulta el [CHANGELOG.md](CHANGELOG.md) para el detalle técnico de cada versión. Las siguientes capacidades están planificadas para las siguientes iteraciones:
 
-### ⚡ 1. Rendimiento y Optimización de Cómputo (v2.0)
-* **Streaming en Tiempo Real (Server-Sent Events / SSE):** Reducción de la latencia percibida por el usuario a menos de 200 ms, emitiendo tokens progresivamente conforme el modelo los genera.
+### ⚡ 1. Rendimiento, Concurrencia y Escalabilidad sobre VMs (v2.0)
+* **Caché Semántico Nativo en Oracle Database 26ai (DBSystem):** Almacenamiento de pares vector-respuesta en el DBSystem (`SEMANTIC_RESPONSE_CACHE`). Si una consulta de soporte entrante tiene similitud $\ge 0.95$ con un caso resuelto previamente, se retorna en **menos de 10 ms** directo de Oracle sin invocar al LLM, reduciendo hasta un 70% de la carga de CPU.
+* **Concurrencia Paralela en Ollama (`OLLAMA_NUM_PARALLEL`):** Configurar 2 a 4 secuencias simultáneas en la VM para evitar bloqueos en cola cuando varios usuarios consultan a la vez.
+* **Pool de Conexiones en Base de Datos (`oracledb.create_pool`):** Eliminar la sobrecarga de handshake TCP y TLS reutilizando conexiones persistentes hacia el DBSystem.
+* **Streaming en Tiempo Real (Server-Sent Events / SSE):** Reducción de la latencia percibida por el usuario a menos de 250 ms, emitiendo tokens progresivamente conforme el modelo los genera.
 * **Afinación de Hilos de CPU (`num_thread`) y KV-Cache:** Asignación dinámica de hilos para saturar balanceadamente todos los vCPUs en procesadores multihilo (AMD EPYC / Intel Xeon) y compresión del buffer de atención a 2048 tokens.
+* **Escalamiento Horizontal con OCI Load Balancer:** Despliegue de un pool de instancias Compute VM detrás de un Private Load Balancer de OCI, manteniendo Oracle Database 26ai como repositorio vectorial centralizado.
 * **Búsqueda Híbrida en Oracle Database 26ai (Hybrid Search):** Fusión de **Oracle Text / BM25** (búsqueda léxica exacta para números de error ORA-, códigos de ticket y comandos) con **AI Vector Search** (búsqueda semántica densa de 768d) usando Reciprocal Rank Fusion (RRF).
 
 ### 🔌 2. Conectores e Integraciones Empresariales
