@@ -41,6 +41,17 @@ def generate_support_resolution(user_query: str, retrieved_context: str) -> str:
             },
             timeout=90
         )
+        if response.status_code == 404:
+            err_msg = ""
+            try:
+                err_msg = response.json().get("error", "")
+            except Exception:
+                pass
+            raise RuntimeError(
+                f"El modelo '{OLLAMA_MODEL}' no está instalado en Ollama. "
+                f"Descárgalo ejecutando en la terminal: 'ollama pull {OLLAMA_MODEL}'. "
+                f"Detalle: {err_msg or 'Model not found'}"
+            )
         response.raise_for_status()
         data = response.json()
         raw_text = data.get("response", "").strip()

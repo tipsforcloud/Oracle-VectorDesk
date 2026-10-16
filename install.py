@@ -566,6 +566,16 @@ def check_ollama_service():
         except Exception as e:
             print(f"  [!] No se pudo instalar Ollama automáticamente: {e}")
 
+    # En Linux, asegurar permisos correctos en /usr/share/ollama (evita fallos de 'permission denied' en RHEL/OL)
+    if sys.platform == "linux":
+        try:
+            cmd_prefix = [] if os.geteuid() == 0 else ["sudo"]
+            subprocess.run(cmd_prefix + ["mkdir", "-p", "/usr/share/ollama/.ollama"], capture_output=True)
+            subprocess.run(cmd_prefix + ["chown", "-R", "ollama:ollama", "/usr/share/ollama"], capture_output=True)
+            subprocess.run(cmd_prefix + ["chmod", "-R", "775", "/usr/share/ollama"], capture_output=True)
+        except Exception:
+            pass
+
     # Verificar si responde en puerto 11434
     ollama_active = False
     try:
