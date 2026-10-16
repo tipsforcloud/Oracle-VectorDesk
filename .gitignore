@@ -63,3 +63,13 @@ tmp/
 *~
 .DS_Store
 Thumbs.db
+
+# Presentaciones y Material Audiovisual Local
+*.pptx
+~$*.pptx
+docs/*.png
+docs/*.jpg
+docs/*.svg
+docs/presentation_slides.md
+scripts/generate_presentation.py
+
