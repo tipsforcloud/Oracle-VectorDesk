@@ -5,7 +5,8 @@
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
 [![Ollama](https://img.shields.io/badge/Ollama-Qwen3_4B-000000?logo=ollama&logoColor=white)](https://ollama.com)
 [![API Docs](https://img.shields.io/badge/API_Docs-Swagger_|_ReDoc-blue?logo=openapi-initiative&logoColor=white)](docs/api_reference.md)
-[![Embeddings](https://img.shields.io/badge/Embeddings-multilingual--e5--base_(768d)-blue)](https://huggingface.co/intfloat/multilingual-e5-base)
+[![YouTube](https://img.shields.io/badge/YouTube-TipsForCloud-FF0000?logo=youtube&logoColor=white)](https://www.youtube.com/@TipsForCloud)
+[![Web](https://img.shields.io/badge/Web-TipsForCloud.com-0078D4?logo=googlechrome&logoColor=white)](https://tipsforcloud.com)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 > **Agente autónomo de soporte técnico empresarial y Helpdesk de Nivel 1** con arquitectura RAG (*Retrieval-Augmented Generation*), impulsado de forma nativa por **Oracle Database 26ai (AI Vector Search)** e inferencia local en CPU sobre **Oracle Cloud Infrastructure (OCI)**. 
@@ -289,6 +290,16 @@ Oracle-VectorDesk/
 ├── LICENSE                       # Licencia MIT
 └── README.md                     # Documentación principal
 ```
+
+---
+
+## 👨‍💻 Autor y Comunidad
+
+Este proyecto es desarrollado y mantenido por **TipsForCloud**, iniciativa dedicada a la creación de contenido técnico, arquitecturas cloud empresariales e Inteligencia Artificial aplicada sobre Oracle Cloud Infrastructure (OCI).
+
+* 🌐 **Sitio Web Oficial:** [https://tipsforcloud.com](https://tipsforcloud.com)
+* 📺 **Canal de YouTube:** [@TipsForCloud en YouTube](https://www.youtube.com/@TipsForCloud)
+* 🐙 **GitHub Organization:** [https://github.com/tipsforcloud](https://github.com/tipsforcloud)
 
 ---
 

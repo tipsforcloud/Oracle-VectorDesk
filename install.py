@@ -26,6 +26,8 @@ def print_banner():
   \____/|_|  \__,_|\___||_|\___|     |_|\___|\___| \__\___/|_|  |____/ \___||___/_|\_\\
                                                                                       
        Asistente Interactivo de Despliegue y Configuración en OCI
+       Desarrollado para la comunidad por TipsForCloud
+       🌐 https://tipsforcloud.com | 📺 https://www.youtube.com/@TipsForCloud
 ================================================================================
 """)
 
@@ -576,6 +578,11 @@ def main():
 
     print("\nPara ejecutar el benchmark de 20 preguntas:")
     print("  python3 scripts/run_benchmark.py")
+    print("\n--------------------------------------------------------------------------------")
+    print(" 🚀 Oracle-VectorDesk es un proyecto Open Source de TipsForCloud:")
+    print("   🌐 Sitio Web Oficial: https://tipsforcloud.com")
+    print("   📺 Canal de YouTube:  https://www.youtube.com/@TipsForCloud")
+    print("   ⭐ Repositorio:       https://github.com/tipsforcloud/Oracle-VectorDesk")
     print("================================================================================\n")
 
 

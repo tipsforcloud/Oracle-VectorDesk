@@ -33,6 +33,7 @@ def print_banner():
   \____/|_|  \__,_|\___||_|\___|     |_|\___|\___| \__\___/|_|  |____/ \___||___/_|\_\\
                                                                                       
       Desinstalador y Desaprovisionamiento Completo (Uninstall Wizard)
+      TipsForCloud | 🌐 https://tipsforcloud.com | 📺 https://www.youtube.com/@TipsForCloud
 ================================================================================
 """)
 
@@ -315,6 +316,8 @@ def main():
     print("El entorno ha sido restaurado a su estado previo.")
     print("Si deseas eliminar también el código fuente del proyecto, ejecuta:")
     print("  cd .. && rm -rf Oracle-VectorDesk")
+    print("\n--------------------------------------------------------------------------------")
+    print(" TipsForCloud | 🌐 https://tipsforcloud.com | 📺 https://www.youtube.com/@TipsForCloud")
     print("================================================================================\n")
 
 
