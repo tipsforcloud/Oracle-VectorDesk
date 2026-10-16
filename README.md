@@ -89,10 +89,28 @@ A diferencia de soluciones tradicionales de IA que exigen GPUs dedicadas (A100/H
 
 ### 1. Prerrequisitos en OCI
 * **Base de Datos:** Oracle Database 26ai o 23ai (Base DB Service o Autonomous Database) accesible por la VCN.
-* **Instancia Compute:** `VM.Standard.E6.Flex` (Oracle Linux 10, 2 OCPUs, 32 GB RAM).
+* **Instancia Compute:** `VM.Standard.E6.Flex` (Oracle Linux 10 u 8/9, 2 OCPUs, 32 GB RAM).
 
+#### 🔑 Paso Previo en Base de Datos: Crear el Usuario de la Aplicación
+Antes de ejecutar el instalador, tu DBA debe crear el usuario de base de datos en tu PDB (*Pluggable Database*) o Autonomous Database con los permisos y cuota necesarios:
+
+```sql
+-- 1. Cambiar de sesión a la PDB destino (ej. PDB1 o tu PDB de trabajo)
+ALTER SESSION SET CONTAINER = TU_PDB;
+
+-- 2. Crear el usuario para el Agente (ej. app_support)
+CREATE USER app_support IDENTIFIED BY "TuPasswordSeguro123!";
+
+-- 3. Asignar roles estándar y cuota de almacenamiento para crear tablas y vectores
+GRANT CONNECT, RESOURCE, UNLIMITED TABLESPACE TO app_support;
+```
+
+> [!NOTE]
+> En Oracle Database 23ai / 26ai, el tipo `VECTOR` y la función `VECTOR_DISTANCE` son tipos escalares nativos concedidos a `PUBLIC`. Los permisos estándar `CONNECT, RESOURCE` son suficientes; **no se requieren permisos SYSDBA ni acceso SSH al servidor de la BD**.
+
+#### ⚙️ En la Instancia Compute (Máquina del Agente):
 ```bash
-# En la máquina Compute: instalar Ollama y descargar Qwen3 4B (ultrarrápido en CPU)
+# Instalar Ollama y descargar Qwen3 4B (ultrarrápido en CPU)
 curl -fsSL https://ollama.com/install.sh | sh
 ollama pull qwen3:4b
 
@@ -108,9 +126,12 @@ cd Oracle-VectorDesk
 ```
 
 ### 3. Ejecutar el Asistente Interactivo de Instalación 🧙‍♂️
-El asistente automatiza la configuración completa conectándose a través del protocolo estándar de base de datos **SQL*Net (puerto 1521)**, siguiendo el principio de mínimos privilegios (sin requerir accesos SSH a nivel de sistema operativo):
-* **Modo 1 (Oracle Base Database Service en VM / On-Prem / Contenedor):** Conexión directa TCP con usuario de base de datos en la PDB (con cuota y permisos `CONNECT, RESOURCE, UNLIMITED TABLESPACE`). El asistente detecta tablas existentes, ejecuta el DDL vectorial nativo e indexa el contenido.
-* **Modo 2 (Autonomous AI Database Serverless):** Despliegue sobre ADB Serverless con Wallet mTLS (usuario `ADMIN` o usuario de aplicación).
+El asistente automatiza la configuración completa conectándose a través del protocolo estándar de base de datos **SQL*Net (puerto 1521)**:
+* **Modo 1 (Oracle Base Database Service en VM / On-Prem / Contenedor):** Conexión directa TCP con el usuario previamente creado (`app_support`). El instalador instala Oracle Instant Client automáticamente, detecta tablas existentes, ejecuta el DDL vectorial nativo e indexa el contenido.
+* **Modo 2 (Autonomous AI Database Serverless):** Despliegue sobre ADB Serverless con Wallet mTLS (usuario `ADMIN` o `app_support`).
+
+> [!IMPORTANT]
+> Asegúrate de haber creado el usuario `app_support` en la PDB (como se indica en el Paso 1) antes de lanzar el asistente.
 
 ```bash
 # Recomendado: instalar PyTorch CPU antes de dependencias pesadas

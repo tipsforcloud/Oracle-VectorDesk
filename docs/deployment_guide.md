@@ -88,8 +88,8 @@ Dentro de SQL*Plus, verifica tus PDBs y cámbiate a tu PDB de trabajo:
 -- Listar PDBs disponibles
 SHOW PDBS;
 
--- Cambiar de sesión a tu PDB PDBLAB1
-ALTER SESSION SET CONTAINER = PDBLAB1;
+-- Cambiar de sesión a tu PDB (ej. TU_PDB o PDB1)
+ALTER SESSION SET CONTAINER = TU_PDB;
 
 -- Verificar sesión actual
 SHOW CON_NAME;
@@ -100,7 +100,7 @@ Crea un usuario dedicado con cuotas y permisos:
 
 ```sql
 -- Crear usuario dedicado en la PDB
-CREATE USER app_support IDENTIFIED BY "#SoporteIA2026."
+CREATE USER app_support IDENTIFIED BY "TuPasswordSeguro123!"
 DEFAULT TABLESPACE users
 TEMPORARY TABLESPACE temp
 QUOTA UNLIMITED ON users;
@@ -109,8 +109,8 @@ GRANT CONNECT, RESOURCE, CREATE TABLE, CREATE VIEW TO app_support;
 -- Nota: En Oracle 23ai/26ai el tipo VECTOR y las funciones SQL como VECTOR_DISTANCE
 -- son tipos escalares nativos concedidos por defecto a PUBLIC (no requieren grant de paquetes).
 
--- Conectarse con el usuario de aplicación en PDBLAB1
-CONNECT app_support/"#SoporteIA2026."@localhost:1521/PDBLAB1;
+-- Conectarse con el usuario de aplicación en la PDB
+CONNECT app_support/"TuPasswordSeguro123!"@localhost:1521/TU_PDB;
 
 
 -- 1. Tabla de Conocimiento Vectorial
