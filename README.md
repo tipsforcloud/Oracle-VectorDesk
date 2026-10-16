@@ -96,7 +96,10 @@ A diferencia de soluciones tradicionales de IA que exigen GPUs dedicadas (A100/H
 
 ### 1. Prerrequisitos en OCI
 * **Base de Datos:** Oracle Database 26ai o 23ai (Base DB Service o Autonomous Database) accesible por la VCN.
-* **Instancia Compute:** `VM.Standard.E6.Flex` (Oracle Linux 10 u 8/9, 2 OCPUs, 32 GB RAM).
+* **Instancia Compute:** `VM.Standard.E5.Flex` o `E6.Flex` (**Requisito obligatorio del SO: Oracle Linux 10 exclusivamente**, mínimo 2 OCPUs / 4 vCPUs, 16-32 GB RAM).
+
+> [!IMPORTANT]
+> **Compatibilidad de Sistema Operativo:** Actualmente, la versión **v1.0.0** está certificada y probada exclusivamente sobre **Oracle Linux 10** en Oracle Cloud Infrastructure (OCI). La compatibilidad con versiones previas (Oracle Linux 8/9 o Ubuntu) está prevista para futuras entregas.
 
 #### 🔑 Paso Previo en Base de Datos: Crear el Usuario de la Aplicación
 Antes de ejecutar el instalador, tu DBA debe crear el usuario de base de datos en tu PDB (*Pluggable Database*) o Autonomous Database con los permisos y cuota necesarios:
