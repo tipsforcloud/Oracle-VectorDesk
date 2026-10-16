@@ -48,7 +48,7 @@ curl -X GET http://localhost:8000/health
   "database": "Oracle Database 26ai AI Vector Search",
   "embedding_model": "intfloat/multilingual-e5-base (768 dims)",
   "llm_model": "qwen3:4b",
-  "dsn": "dbhost9185.sub04051019361.sarizavcn.oraclevcn.com:1521/pdblab1.sub04051019361.sarizavcn.oraclevcn.com"
+  "dsn": "dbhost.sub.yourvcn.oraclevcn.com:1521/pdb1.sub.yourvcn.oraclevcn.com"
 }
 ```
 

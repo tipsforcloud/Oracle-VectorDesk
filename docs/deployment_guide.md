@@ -234,10 +234,10 @@ Crea un archivo `.env` con las credenciales de tu DBSystem:
 ```bash
 cat << 'EOF' > .env
 DB_USER=app_support
-DB_PASSWORD=#SoporteIA2026.
-DB_DSN=dbhost9185.sub04051019361.sarizavcn.oraclevcn.com:1521/pdblab1.sub04051019361.sarizavcn.oraclevcn.com
+DB_PASSWORD=TuPasswordSeguro123!
+DB_DSN=dbhost.sub.yourvcn.oraclevcn.com:1521/pdb1.sub.yourvcn.oraclevcn.com
 OLLAMA_URL=http://localhost:11434/api/generate
-OLLAMA_MODEL=qwen2.5:7b-instruct-q4_K_M
+OLLAMA_MODEL=qwen3:4b
 EOF
 ```
 
@@ -266,7 +266,7 @@ python3 ingest_pdfs.py
 ================================================================================
 Directorio de documentos: /root/agente_soporte_rag/docs_demo
 Total de PDFs detectados: 10
-Destino: Oracle Database 26ai @ dbhost9185... (Usuario: app_support)
+Destino: Oracle Database 26ai @ dbhost... (Usuario: app_support)
 
 Cargando modelo de embeddings de alta precisión (768 dimensiones) en CPU...
 Modelo cargado exitosamente en RAM.
@@ -362,7 +362,7 @@ python3 run_benchmark.py
 | :--- | :--- | :--- | :--- |
 | **2026-10-15** | `ORA-04042: DBMS_VECTOR does not exist` al ejecutar GRANT | En Oracle 23ai/26ai el tipo `VECTOR` y funciones SQL (`VECTOR_DISTANCE`) son tipos escalares nativos públicos del motor, no requieren paquetes PL/SQL adicionales. | Omitir el comando `GRANT EXECUTE ON DBMS_VECTOR`. Los permisos estándar `CONNECT, RESOURCE, CREATE TABLE` son suficientes. |
 | **2026-10-15** | Rechazo de formato de contraseña (`ORA-28003`) al crear usuario | Función de verificación de complejidad de contraseñas de Oracle Database activa en el perfil. | Se ajustó la contraseña a `#SoporteIA2026.` (iniciando con símbolo especial y terminando con punto, cumpliendo longitud y diversidad de caracteres). |
-| **2026-10-15** | Listener de Oracle no iniciado en DBSystem (`dbhost9185`) | Proceso listener detenido o servicio `PDBLAB1` pendiente de registro en `tnsnames.ora`. | Iniciar listener con `lsnrctl start`, verificar servicios con `lsnrctl status` y agregar entrada TNS para `PDBLAB1` apuntando al host `dbhost9185`. |
+| **2026-10-15** | Listener de Oracle no iniciado en DBSystem (`dbhost`) | Proceso listener detenido o servicio `PDB1` pendiente de registro en `tnsnames.ora`. | Iniciar listener con `lsnrctl start`, verificar servicios con `lsnrctl status` y agregar entrada TNS para `PDB1` apuntando al host `dbhost`. |
 | **2026-10-15** | DBSystem aprovisionado en versión 19.32 en lugar de 23ai | Selección de versión base 19c en el aprovisionamiento inicial. | Se inició el proceso de actualización (Upgrade/Patching) a Oracle Database 23ai directamente desde la consola de OCI. |
 | **2026-10-15** | `bash: pip3: command not found` en Compute E6 (Oracle Linux 10) | Imagen mínima del sistema operativo sin el gestor de paquetes de Python preinstalado. | Ejecutar `dnf install -y python3-pip` antes de instalar dependencias de la aplicación. |
 | **2026-10-15** | `OSError: [Errno 28] No space left on device` al instalar `sentence-transformers` | Por defecto, `pip` descargó PyTorch con paquetes pesados de NVIDIA CUDA 12/13 (>4 GB), saturando el disco raíz en una VM de solo CPU. | Limpiar caché (`pip3 cache purge`) e instalar PyTorch ligero para CPU (`--index-url https://download.pytorch.org/whl/cpu`, ~180 MB) antes de instalar `sentence-transformers`. |
@@ -370,7 +370,7 @@ python3 run_benchmark.py
 | **2026-10-15** | `ORA-00406: COMPATIBLE parameter needs to be 20.0 or greater` al crear tabla VECTOR | Tras el upgrade de 19c a 23ai, el parámetro `COMPATIBLE` se mantiene en 19.0.0 para permitir rollback. Funcionalidades de 23ai como `VECTOR` requieren 23.0.0. | En `CDB$ROOT`: `ALTER SYSTEM SET COMPATIBLE='23.0.0' SCOPE=SPFILE;`, reiniciar la base de datos (`SHUTDOWN IMMEDIATE; STARTUP;`) y abrir las PDBs (`ALTER PLUGGABLE DATABASE ALL OPEN;`). |
 | **2026-10-15** | `ORA-51962: The vector memory area is out of space for the current container` al crear índice HNSW | El pool de memoria SGA para búsqueda vectorial (`VECTOR_MEMORY_SIZE`) está en 0 por defecto tras el upgrade. Índices `INMEMORY NEIGHBOR GRAPH` requieren reservar este pool. | Configurar `ALTER SYSTEM SET VECTOR_MEMORY_SIZE=1G SCOPE=SPFILE;` en `CDB$ROOT` y reiniciar instancia. |
 | **2026-10-15** | `ORA-02000: missing PARTITIONS keyword` al intentar `ORGANIZATION NEIGHBOR GRAPH` | La sintaxis oficial de Oracle 23ai para grafos HNSW exige la palabra reservada `INMEMORY` (`ORGANIZATION INMEMORY NEIGHBOR GRAPH`). Para índices sin memoria se usa IVF (`ORGANIZATION INVERTED FLAT`). Para bases de conocimiento pequeñas/medianas no se requiere índice (Exact Vector Search nativo). | Usar Exact Search (sin índice, velocidad sub-milisegundo con SIMD) o configurar `VECTOR_MEMORY_SIZE=1G` para índice HNSW. |
-| **2026-10-15** | `DPY-6001: Service "PDBLAB1" is not registered with the listener` (ORA-12514) al conectar desde Python | En OCI DB Systems el nombre del servicio de la PDB suele llevar el sufijo de dominio de la VCN (ej. `PDBLAB1.sub04051019361...`) o la PDB no estaba abierta en READ WRITE tras reiniciar. | Abrir la PDB (`ALTER PLUGGABLE DATABASE PDBLAB1 OPEN;`), registrar el servicio con `ALTER SYSTEM REGISTER;` y validar el nombre exacto con `lsnrctl status`. |
+| **2026-10-15** | `DPY-6001: Service "PDB1" is not registered with the listener` (ORA-12514) al conectar desde Python | En OCI DB Systems el nombre del servicio de la PDB suele llevar el sufijo de dominio de la VCN (ej. `pdb1.sub.yourvcn...`) o la PDB no estaba abierta en READ WRITE tras reiniciar. | Abrir la PDB (`ALTER PLUGGABLE DATABASE PDB1 OPEN;`), registrar el servicio con `ALTER SYSTEM REGISTER;` y validar el nombre exacto con `lsnrctl status`. |
 | **2026-10-15** | `DPY-3001: Native Network Encryption and Data Integrity is only supported in python-oracledb thick mode` | En OCI DB Systems `sqlnet.ora` tiene configurado por defecto `SQLNET.ENCRYPTION_SERVER = REQUIRED`. El modo *Thin* de python-oracledb no soporta NNE heredado (requiere Thick mode o TLS). Los comandos automatizados como `sed -i` pueden fallar por espaciado o formato interno. | En el DBSystem, editar manualmente (`sudo vi /opt/oracle/dcs/commonstore/wallets/tde/...` o `$ORACLE_HOME/network/admin/sqlnet.ora`) y cambiar a `SQLNET.ENCRYPTION_SERVER = ACCEPTED` y `SQLNET.CRYPTO_CHECKSUM_SERVER = ACCEPTED`. Esto habilita conexiones seguras en modo *Thin* a través de la red privada VCN sin requerir cliente Thick. |
 | **2026-10-15** | Conexión entrante rechazada o timeout en puerto 8000 del backend FastAPI | La imagen oficial de Oracle Linux incluye el cortafuegos del sistema operativo (`firewalld`) activo por defecto, bloqueando puertos de servicios no estándar. | Ejecutar `firewall-cmd --add-port=8000/tcp --permanent` seguido de `firewall-cmd --reload` en la instancia Compute E6. (Adicionalmente, si se accede desde fuera de la VCN, verificar la Security List o NSG de OCI). |
 

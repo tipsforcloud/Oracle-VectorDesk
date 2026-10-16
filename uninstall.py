@@ -23,7 +23,7 @@ sys.path.insert(0, str(BASE_DIR))
 
 
 def print_banner():
-    print("""
+    print(r"""
 ================================================================================
    ____                  _        __     __        _             ____            _    
   / __ \                | |       \ \   / /       | |           |  _ \          | |   
@@ -151,19 +151,25 @@ def clean_oracle_database(env_vars: dict):
 
     # Obtener credenciales desde .env o pedir interactivamente
     default_user = env_vars.get("DB_USER", "app_support")
-    default_dsn = env_vars.get("DB_DSN", "dbhost9185.sub04051019361.sarizavcn.oraclevcn.com:1521/pdblab1.sub04051019361.sarizavcn.oraclevcn.com")
+    default_dsn = env_vars.get("DB_DSN", "")
     wallet_dir = env_vars.get("WALLET_DIR", None)
     wallet_password = env_vars.get("WALLET_PASSWORD", None)
+
+    default_host = default_dsn.split(":")[0] if ":" in default_dsn else ""
+    default_pdb = default_dsn.split("/")[-1].split(".")[0].upper() if "/" in default_dsn else "FREEPDB1"
 
     if action == "2":
         # Opción DROP USER CASCADE requiere privilegios SYSDBA o SSH
         print("\n  -- Borrado Completo de Usuario (DROP USER CASCADE) --")
         use_ssh = input("  ¿Deseas ejecutar el borrado vía SSH conectándote como SYSDBA al DBSystem? [S/n]: ").strip().lower()
         if use_ssh != 'n':
-            ssh_host = ask_input("  Host / FQDN del DBSystem", default_dsn.split(":")[0])
+            prompt_host = "  Host / FQDN o IP del DBSystem"
+            if not default_host:
+                prompt_host += " (ej. 10.0.1.15 o dbhost.sub.yourvcn.oraclevcn.com)"
+            ssh_host = ask_input(prompt_host, default_host)
             ssh_user = ask_input("  Usuario SSH", "opc")
             ssh_key = ask_input("  Ruta a la llave SSH", "~/.ssh/id_rsa")
-            pdb_name = ask_input("  Nombre de la PDB", "PDBLAB1")
+            pdb_name = ask_input("  Nombre de la PDB", default_pdb)
             user_to_drop = ask_input("  Usuario a eliminar", default_user)
 
             confirm = input(f"  ¿Confirmas ejecutar 'DROP USER {user_to_drop} CASCADE' en {pdb_name}? [s/N]: ").strip().lower()
@@ -184,7 +190,10 @@ def clean_oracle_database(env_vars: dict):
     password = env_vars.get("DB_PASSWORD", "")
     if not password:
         password = getpass.getpass("  Contraseña del Usuario DB: ")
-    dsn = ask_input("  DSN de Conexión", default_dsn)
+    prompt_dsn = "  DSN de Conexión"
+    if not default_dsn:
+        prompt_dsn += " (ej. dbhost.sub.yourvcn.oraclevcn.com:1521/pdb1.sub.yourvcn.oraclevcn.com)"
+    dsn = ask_input(prompt_dsn, default_dsn)
 
     try:
         import oracledb

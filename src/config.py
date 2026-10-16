@@ -20,7 +20,7 @@ else:
 # Configuración de Oracle Database 26ai
 DB_USER = os.getenv("DB_USER", "app_support")
 DB_PASSWORD = os.getenv("DB_PASSWORD", "CambiarPorTuPassword123!")
-DB_DSN = os.getenv("DB_DSN", "localhost:1521/PDBLAB1")
+DB_DSN = os.getenv("DB_DSN", "localhost:1521/FREEPDB1")
 WALLET_DIR = os.getenv("WALLET_DIR", None)
 WALLET_PASSWORD = os.getenv("WALLET_PASSWORD", None)
 
