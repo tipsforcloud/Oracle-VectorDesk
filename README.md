@@ -154,7 +154,13 @@ sudo python3 scripts/setup_systemd_service.py
 
 ---
 
-## 🧪 Pruebas y Validación
+## 🧪 Pruebas y Validación de la API
+
+### 📖 Documentación Interactiva (Swagger UI & ReDoc)
+FastAPI expone documentación web interactiva lista para probar los endpoints en vivo:
+* **Swagger UI (Consola interactiva):** `http://<IP_DE_LA_VM>:8000/docs`
+* **ReDoc (Documentación técnica):** `http://<IP_DE_LA_VM>:8000/redoc`
+* **Referencia Completa:** Consulta la [Guía de Referencia de la API REST](docs/api_reference.md) para esquemas JSON, códigos de error y ejemplos en Python y Node.js.
 
 ### Probar Salud del Servicio
 ```bash
@@ -254,6 +260,7 @@ Oracle-VectorDesk/
 │   └── benchmark_questions.json  # 20 preguntas de evaluación
 │
 ├── docs/                         # Documentación técnica
+│   ├── api_reference.md          # 📡 Referencia completa de endpoints y contratos REST
 │   └── deployment_guide.md       # Manual completo y Troubleshooting
 │
 ├── install.py                    # Asistente interactivo de instalación (Setup Wizard)
