@@ -9,6 +9,13 @@ import oracledb
 from typing import List, Dict, Any, Optional
 from src.config import DB_USER, DB_PASSWORD, DB_DSN, WALLET_DIR, WALLET_PASSWORD
 
+# Inicializar Modo Thick (Oracle Instant Client) para soporte completo de
+# Native Network Encryption (SQLNET.ENCRYPTION_SERVER = REQUIRED), ATP y Base DB.
+try:
+    oracledb.init_oracle_client()
+except Exception:
+    pass
+
 
 def get_connection():
     """Retorna una conexión abierta hacia Oracle Database 26ai."""

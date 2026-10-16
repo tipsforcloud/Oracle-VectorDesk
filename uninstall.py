@@ -21,6 +21,13 @@ from pathlib import Path
 BASE_DIR = Path(__file__).resolve().parent
 sys.path.insert(0, str(BASE_DIR))
 
+# Inicializar Modo Thick si Oracle Instant Client está disponible
+try:
+    import oracledb
+    oracledb.init_oracle_client()
+except Exception:
+    pass
+
 
 def print_banner():
     print(r"""

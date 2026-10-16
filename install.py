@@ -43,8 +43,63 @@ def ask_input(prompt: str, default: str = "") -> str:
                 return res
 
 
+def ensure_oracle_instant_client():
+    """Verifica e instala Oracle Instant Client para habilitar Modo Thick y soporte de cifrado nativo."""
+    print("\n  Verificando Oracle Instant Client (Modo Thick)...")
+    try:
+        import oracledb
+        oracledb.init_oracle_client()
+        print("  [✓] Oracle Instant Client detectado y activo (Modo Thick habilitado).")
+        return True
+    except Exception as e:
+        if "already been initialized" in str(e):
+            return True
+
+    if sys.platform != "linux":
+        print("  [i] Plataforma no Linux. Para habilitar Modo Thick, instala Oracle Instant Client manualmente.")
+        return False
+
+    print("  -> Oracle Instant Client no detectado en el sistema.")
+    print("     Instalando cliente oficial para máxima compatibilidad (soporte de Base DB con cifrado NNE y ATP)...")
+
+    # Detectar versión EL (Oracle Linux / RHEL 8, 9, 10)
+    el_ver = "9"
+    try:
+        if os.path.exists("/etc/os-release"):
+            with open("/etc/os-release", "r", encoding="utf-8") as f:
+                for line in f:
+                    if line.startswith("VERSION_ID="):
+                        val = line.split("=")[1].strip().strip('"').split(".")[0]
+                        if val in ("8", "9", "10"):
+                            el_ver = val
+    except Exception:
+        pass
+
+    if shutil.which("dnf"):
+        try:
+            print(f"     Habilitando repositorio oficial de Instant Client (Oracle Linux {el_ver})...")
+            subprocess.run(["sudo", "dnf", "install", "-y", f"oracle-instantclient-release-el{el_ver}"], capture_output=True)
+            print("     Instalando paquete oracle-instantclient-basic...")
+            res = subprocess.run(["sudo", "dnf", "install", "-y", "oracle-instantclient-basic"])
+            if res.returncode == 0:
+                print("  [✓] Oracle Instant Client instalado exitosamente.")
+                try:
+                    import oracledb
+                    oracledb.init_oracle_client()
+                    print("  [✓] Modo Thick de Oracle inicializado correctamente.")
+                    return True
+                except Exception as init_err:
+                    print(f"  [!] Nota al inicializar cliente C: {init_err}")
+            else:
+                print("  [!] Advertencia: No se pudo instalar el paquete con dnf.")
+        except Exception as dnf_err:
+            print(f"  [!] Error ejecutando dnf: {dnf_err}")
+
+    return False
+
+
 def check_python_dependencies():
-    print("[1/6] Verificando dependencias de Python...")
+    print("[1/6] Verificando dependencias de Python y Oracle Instant Client...")
     required = ["oracledb", "dotenv", "fastapi", "uvicorn", "pydantic", "requests"]
     missing = []
     for pkg in required:
@@ -62,6 +117,9 @@ def check_python_dependencies():
             print("  [✓] Dependencias base instaladas con éxito.")
     else:
         print("  [✓] Todas las dependencias base de Python están presentes.")
+
+    # Asegurar Oracle Instant Client
+    ensure_oracle_instant_client()
 
 
 def load_existing_env():
