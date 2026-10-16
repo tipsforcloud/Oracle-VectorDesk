@@ -220,9 +220,12 @@ def clean_ollama_and_models(env_vars: dict):
     print("\n[3/4] Gestión de Modelos y Servicio Ollama...")
     
     # 1. Eliminar modelos descargados
-    del_models = input("  ¿Deseas eliminar los modelos LLM descargados para el agente (qwen3:4b, etc.)? [S/n]: ").strip().lower()
+    del_models = input("  ¿Deseas eliminar los modelos LLM descargados para el agente (qwen2.5:3b, etc.)? [S/n]: ").strip().lower()
     if del_models != 'n':
-        models_to_check = ["qwen3:4b", "qwen2.5:7b-instruct-q4_K_M", "qwen2.5:3b"]
+        models_to_check = ["qwen2.5:3b", "qwen2.5:7b", "llama3.2:3b", "phi3.5:3.8b", "qwen3:4b"]
+        configured_model = env_vars.get("OLLAMA_MODEL")
+        if configured_model and configured_model not in models_to_check:
+            models_to_check.insert(0, configured_model)
         for m in models_to_check:
             try:
                 res = subprocess.run(["ollama", "rm", m], capture_output=True, text=True)

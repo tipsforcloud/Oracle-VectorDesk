@@ -9,6 +9,7 @@ import sys
 import shutil
 import getpass
 import subprocess
+import re
 from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -607,8 +608,38 @@ def check_ollama_service():
 
     print("  [✓] Servicio Ollama activo y respondiendo correctamente en http://localhost:11434.")
 
-    # 6. Verificar y descargar el modelo local requerido (qwen2.5:3b)
-    target_model = "qwen2.5:3b"
+    # 6. Selección y descarga del modelo local para inferencia en CPU
+    print("\n  Selecciona el modelo LLM optimizado para inferencia en CPU:")
+    print("  1) qwen2.5:3b  [Por defecto] - Ultra-rápido (~2-4s), 1.9 GB RAM. Excelente en español y RAG.")
+    print("  2) qwen2.5:7b  - Máxima precisión técnica (~8-12s), 4.7 GB RAM. Ideal para respuestas complejas.")
+    print("  3) llama3.2:3b - Modelo ligero de Meta (~3-5s), 2.0 GB RAM. Conciso, moderno y equilibrado.")
+    print("  4) phi3.5:3.8b - Modelo de Microsoft (~4-6s), 2.2 GB RAM. Excelente seguimiento lógico.")
+    print("  5) Personalizado (especificar cualquier otro modelo de Ollama, ej: mistral:7b, qwen3:4b)")
+
+    choice = input("\n  Selecciona una opción [1/2/3/4/5, por defecto 1]: ").strip()
+    if choice == "2":
+        target_model = "qwen2.5:7b"
+    elif choice == "3":
+        target_model = "llama3.2:3b"
+    elif choice == "4":
+        target_model = "phi3.5:3.8b"
+    elif choice == "5":
+        custom = input("  Ingresa el nombre del modelo de Ollama (ej: mistral:7b, qwen3:4b): ").strip()
+        target_model = custom if custom else "qwen2.5:3b"
+    else:
+        target_model = "qwen2.5:3b"
+
+    # Actualizar o persistir OLLAMA_MODEL en el archivo .env
+    env_file = BASE_DIR / ".env"
+    if env_file.exists():
+        content = env_file.read_text(encoding="utf-8")
+        if "OLLAMA_MODEL=" in content:
+            new_content = re.sub(r"OLLAMA_MODEL=.*", f"OLLAMA_MODEL={target_model}", content)
+        else:
+            new_content = content.rstrip() + f"\nOLLAMA_MODEL={target_model}\n"
+        env_file.write_text(new_content, encoding="utf-8")
+        print(f"  [✓] Configuración guardada: OLLAMA_MODEL={target_model} en .env")
+
     try:
         resp = requests.get("http://localhost:11434/api/tags", timeout=5)
         models = [m.get("name") for m in resp.json().get("models", [])]
@@ -617,7 +648,7 @@ def check_ollama_service():
         if has_model:
             print(f"  [✓] Modelo '{target_model}' ya disponible localmente en Ollama.")
         else:
-            print(f"\n  -> Descargando modelo '{target_model}' para inferencia local ultrarrápida en CPU (aprox. 1.9 GB)...")
+            print(f"\n  -> Descargando modelo '{target_model}' en Ollama...")
             print("     Por favor espera mientras se descarga y extrae el modelo...")
             pull_cmd = [ollama_bin or "ollama", "pull", target_model]
             ret = subprocess.run(pull_cmd)
