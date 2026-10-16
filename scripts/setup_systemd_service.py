@@ -100,10 +100,14 @@ WantedBy=multi-user.target
         print("  [✓] systemctl daemon-reload ejecutado.")
 
         if start_now:
-            # Asegurar que el motor de inferencia Ollama arranque automáticamente tras reinicio
-            if shutil.which("ollama"):
+            # Asegurar que el motor de inferencia Ollama tenga permisos correctos y arranque automáticamente
+            if shutil.which("ollama") or os.path.exists("/usr/local/bin/ollama"):
+                if sys.platform == "linux":
+                    subprocess.run(cmd_prefix + ["mkdir", "-p", "/usr/share/ollama/.ollama/models"], capture_output=True)
+                    subprocess.run(cmd_prefix + ["chown", "-R", "ollama:ollama", "/usr/share/ollama"], capture_output=True)
+                    subprocess.run(cmd_prefix + ["chmod", "-R", "775", "/usr/share/ollama"], capture_output=True)
                 subprocess.run(cmd_prefix + ["systemctl", "enable", "--now", "ollama"], capture_output=True)
-                print("  [✓] Servicio 'ollama' habilitado y arrancado para persistencia tras reinicio.")
+                print("  [✓] Servicio 'ollama' verificado, habilitado y arrancado para persistencia tras reinicio.")
 
             # Habilitar y arrancar el servicio del agente de soporte
             subprocess.run(cmd_prefix + ["systemctl", "enable", "--now", service_name], check=True)

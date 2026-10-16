@@ -544,83 +544,96 @@ def execute_sql_initialization(user, password, dsn, wallet_dir=None, wallet_pass
 
 
 def check_ollama_service():
-    print("\n[4/6] Verificando Motor LLM en CPU (Ollama)...")
+    print("\n[4/6] Configuración Integral del Motor LLM en CPU (Ollama)...")
+    import time
+    import requests
     
-    # Asegurar que /usr/local/bin esté en el PATH (donde se instala ollama en Linux)
+    # 1. Asegurar que /usr/local/bin esté en el PATH (donde se instala ollama en Linux)
     if sys.platform == "linux" and "/usr/local/bin" not in os.environ.get("PATH", ""):
         os.environ["PATH"] = f"/usr/local/bin:{os.environ.get('PATH', '')}"
 
+    cmd_prefix = [] if (hasattr(os, "geteuid") and os.geteuid() == 0) else ["sudo"]
     ollama_bin = shutil.which("ollama")
 
-    # Si no está instalado en Linux, instalar automáticamente con el script oficial
+    # 2. Si no está instalado en Linux, instalar automáticamente con el script oficial
     if not ollama_bin and sys.platform == "linux":
-        print("  -> Motor Ollama no detectado en el sistema.")
-        print("     Instalando Ollama automáticamente (curl -fsSL https://ollama.com/install.sh | sh)...")
+        print("  -> Ollama no detectado en el sistema.")
+        print("     Instalando Ollama automáticamente con el instalador oficial...")
         try:
             cmd = "curl -fsSL https://ollama.com/install.sh | sh"
-            if os.geteuid() != 0:
+            if cmd_prefix:
                 cmd = "curl -fsSL https://ollama.com/install.sh | sudo -E sh"
             subprocess.run(cmd, shell=True, check=True)
-            ollama_bin = shutil.which("ollama")
-            print("  [✓] Instalación oficial de Ollama completada.")
+            ollama_bin = shutil.which("ollama") or "/usr/local/bin/ollama"
+            print("  [✓] Instalador oficial de Ollama ejecutado exitosamente.")
         except Exception as e:
-            print(f"  [!] No se pudo instalar Ollama automáticamente: {e}")
+            print(f"  [!] Error al ejecutar instalador de Ollama: {e}")
 
-    # En Linux, asegurar permisos correctos en /usr/share/ollama (evita fallos de 'permission denied' en RHEL/OL)
+    # 3. En Linux, configurar permisos del directorio de datos de Ollama (/usr/share/ollama)
+    #    (Evita 'permission denied' para el usuario 'ollama' en Oracle Linux / RHEL)
     if sys.platform == "linux":
         try:
-            cmd_prefix = [] if os.geteuid() == 0 else ["sudo"]
-            subprocess.run(cmd_prefix + ["mkdir", "-p", "/usr/share/ollama/.ollama"], capture_output=True)
+            print("  -> Verificando y configurando permisos en /usr/share/ollama...")
+            subprocess.run(cmd_prefix + ["mkdir", "-p", "/usr/share/ollama/.ollama/models"], capture_output=True)
             subprocess.run(cmd_prefix + ["chown", "-R", "ollama:ollama", "/usr/share/ollama"], capture_output=True)
             subprocess.run(cmd_prefix + ["chmod", "-R", "775", "/usr/share/ollama"], capture_output=True)
+        except Exception as e:
+            print(f"  [!] Nota al ajustar permisos en /usr/share/ollama: {e}")
+
+    # 4. Asegurar que el servicio systemd de Ollama esté habilitado y activo
+    if sys.platform == "linux" and (ollama_bin or os.path.exists("/usr/local/bin/ollama")):
+        print("  -> Habilitando e iniciando servicio 'ollama' en systemd...")
+        subprocess.run(cmd_prefix + ["systemctl", "daemon-reload"], capture_output=True)
+        subprocess.run(cmd_prefix + ["systemctl", "restart", "ollama"], capture_output=True)
+        subprocess.run(cmd_prefix + ["systemctl", "enable", "ollama"], capture_output=True)
+
+    # 5. Esperar activamente a que la API de Ollama esté escuchando (bucle de sondeo hasta 15s)
+    print("  -> Esperando disponibilidad de la API de Ollama en http://localhost:11434...")
+    ollama_active = False
+    for _ in range(15):
+        try:
+            resp = requests.get("http://localhost:11434/api/tags", timeout=2)
+            if resp.status_code == 200:
+                ollama_active = True
+                break
         except Exception:
             pass
+        time.sleep(1)
 
-    # Verificar si responde en puerto 11434
-    ollama_active = False
+    if not ollama_active:
+        print("  [!] Advertencia: No se pudo conectar a Ollama en http://localhost:11434 tras 15 segundos.")
+        print("      Verifica el log con: sudo journalctl -u ollama -n 25 --no-pager")
+        return False
+
+    print("  [✓] Servicio Ollama activo y respondiendo correctamente en http://localhost:11434.")
+
+    # 6. Verificar y descargar el modelo local requerido (qwen3:4b)
+    target_model = "qwen3:4b"
     try:
-        import requests
-        resp = requests.get("http://localhost:11434/api/tags", timeout=3)
-        ollama_active = (resp.status_code == 200)
-    except Exception:
-        ollama_active = False
+        resp = requests.get("http://localhost:11434/api/tags", timeout=5)
+        models = [m.get("name") for m in resp.json().get("models", [])]
+        has_model = any(target_model in m.lower() or "qwen3" in m.lower() for m in models)
 
-    # Si está instalado pero el servicio no responde, habilitar e iniciar con systemd
-    if not ollama_active and ollama_bin and sys.platform == "linux":
-        print("  -> Habilitando e iniciando servicio 'ollama' automáticamente con systemd...")
-        cmd_prefix = [] if os.geteuid() == 0 else ["sudo"]
-        subprocess.run(cmd_prefix + ["systemctl", "enable", "--now", "ollama"], capture_output=True)
-        import time
-        time.sleep(3)
-        try:
-            resp = requests.get("http://localhost:11434/api/tags", timeout=3)
-            ollama_active = (resp.status_code == 200)
-            if ollama_active:
-                print("  [✓] Servicio 'ollama' iniciado y configurado para arranque automático tras reinicio.")
-        except Exception:
-            ollama_active = False
-
-    if ollama_active:
-        try:
-            resp = requests.get("http://localhost:11434/api/tags", timeout=3)
-            models = [m.get("name") for m in resp.json().get("models", [])]
-            print(f"  [✓] Servicio Ollama activo. Modelos disponibles: {', '.join(models) if models else 'Ninguno'}")
-            
-            target_model = "qwen3:4b"
-            has_model = any("qwen3" in m.lower() or "qwen2.5" in m.lower() for m in models)
-            if not has_model:
-                print(f"  -> Descargando modelo '{target_model}' para inferencia local en CPU...")
-                subprocess.run([ollama_bin or "ollama", "pull", target_model])
-                print(f"  [✓] Modelo '{target_model}' descargado y listo para inferencia.")
-        except Exception as e:
-            print(f"  [!] Nota al consultar modelos en Ollama: {e}")
-        return True
-    else:
-        print("  [!] Advertencia: No se pudo conectar a Ollama en http://localhost:11434.")
-        if not ollama_bin:
-            print("      Instálalo manualmente con: curl -fsSL https://ollama.com/install.sh | sh")
+        if has_model:
+            print(f"  [✓] Modelo '{target_model}' ya disponible localmente en Ollama.")
         else:
-            print("      Inicia el servicio ejecutando: sudo systemctl enable --now ollama")
+            print(f"\n  -> Descargando modelo '{target_model}' para inferencia local en CPU (aprox. 2.5 GB)...")
+            print("     Por favor espera mientras se descarga y extrae el modelo...")
+            pull_cmd = [ollama_bin or "ollama", "pull", target_model]
+            ret = subprocess.run(pull_cmd)
+            if ret.returncode == 0:
+                print(f"  [✓] Modelo '{target_model}' descargado e instalado exitosamente.")
+            else:
+                print(f"  [!] Advertencia: 'ollama pull {target_model}' finalizó con código {ret.returncode}.")
+
+        # Confirmación de modelos presentes
+        resp_final = requests.get("http://localhost:11434/api/tags", timeout=5)
+        available = [m.get("name") for m in resp_final.json().get("models", [])]
+        print(f"  [✓] Modelos activos en Ollama: {', '.join(available) if available else 'Ninguno'}")
+        return True
+
+    except Exception as e:
+        print(f"  [!] Error al verificar o descargar modelo en Ollama: {e}")
         return False
 
 
