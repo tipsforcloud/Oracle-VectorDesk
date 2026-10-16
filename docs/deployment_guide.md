@@ -125,7 +125,9 @@ CREATE TABLE knowledge_base (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
--- 2. Índice Vectorial HNSW optimizado para distancia Coseno
+-- 2. Índice Vectorial HNSW optimizado para distancia Coseno (Enterprise Edition / ATP)
+-- Nota: Requiere 'vector_memory_size' > 0 configurado en el servidor (Enterprise Edition o Autonomous ATP).
+-- En Oracle Database Standard Edition 2, este índice se omite y el motor ejecuta Exact Vector Search (SIMD nativo) con 100% de precisión.
 CREATE VECTOR INDEX idx_knowledge_embedding 
 ON knowledge_base (embedding)
 ORGANIZATION INMEMORY NEIGHBOR GRAPH
