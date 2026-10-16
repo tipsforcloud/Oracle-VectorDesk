@@ -545,7 +545,26 @@ def execute_sql_initialization(user, password, dsn, wallet_dir=None, wallet_pass
 
 def check_ollama_service():
     print("\n[4/6] Verificando Motor LLM en CPU (Ollama)...")
+    
+    # Asegurar que /usr/local/bin esté en el PATH (donde se instala ollama en Linux)
+    if sys.platform == "linux" and "/usr/local/bin" not in os.environ.get("PATH", ""):
+        os.environ["PATH"] = f"/usr/local/bin:{os.environ.get('PATH', '')}"
+
     ollama_bin = shutil.which("ollama")
+
+    # Si no está instalado en Linux, instalar automáticamente con el script oficial
+    if not ollama_bin and sys.platform == "linux":
+        print("  -> Motor Ollama no detectado en el sistema.")
+        print("     Instalando Ollama automáticamente (curl -fsSL https://ollama.com/install.sh | sh)...")
+        try:
+            cmd = "curl -fsSL https://ollama.com/install.sh | sh"
+            if os.geteuid() != 0:
+                cmd = "curl -fsSL https://ollama.com/install.sh | sudo -E sh"
+            subprocess.run(cmd, shell=True, check=True)
+            ollama_bin = shutil.which("ollama")
+            print("  [✓] Instalación oficial de Ollama completada.")
+        except Exception as e:
+            print(f"  [!] No se pudo instalar Ollama automáticamente: {e}")
 
     # Verificar si responde en puerto 11434
     ollama_active = False
@@ -556,13 +575,13 @@ def check_ollama_service():
     except Exception:
         ollama_active = False
 
-    # Si está instalado pero no responde, habilitar e iniciar automáticamente con systemd
+    # Si está instalado pero el servicio no responde, habilitar e iniciar con systemd
     if not ollama_active and ollama_bin and sys.platform == "linux":
         print("  -> Habilitando e iniciando servicio 'ollama' automáticamente con systemd...")
         cmd_prefix = [] if os.geteuid() == 0 else ["sudo"]
         subprocess.run(cmd_prefix + ["systemctl", "enable", "--now", "ollama"], capture_output=True)
         import time
-        time.sleep(2)
+        time.sleep(3)
         try:
             resp = requests.get("http://localhost:11434/api/tags", timeout=3)
             ollama_active = (resp.status_code == 200)
@@ -581,16 +600,18 @@ def check_ollama_service():
             has_model = any("qwen3" in m.lower() or "qwen2.5" in m.lower() for m in models)
             if not has_model:
                 print(f"  -> Descargando modelo '{target_model}' para inferencia local en CPU...")
-                subprocess.run(["ollama", "pull", target_model])
+                subprocess.run([ollama_bin or "ollama", "pull", target_model])
                 print(f"  [✓] Modelo '{target_model}' descargado y listo para inferencia.")
         except Exception as e:
             print(f"  [!] Nota al consultar modelos en Ollama: {e}")
+        return True
     else:
         print("  [!] Advertencia: No se pudo conectar a Ollama en http://localhost:11434.")
         if not ollama_bin:
-            print("      Instálalo con: curl -fsSL https://ollama.com/install.sh | sh")
+            print("      Instálalo manualmente con: curl -fsSL https://ollama.com/install.sh | sh")
         else:
             print("      Inicia el servicio ejecutando: sudo systemctl enable --now ollama")
+        return False
 
 
 def setup_knowledge_base(tracker=None):
@@ -693,7 +714,7 @@ def main():
         check_python_dependencies()
         user, password, dsn, wallet_dir, wallet_password = setup_database_config(tracker)
         execute_sql_initialization(user, password, dsn, wallet_dir, wallet_password, tracker)
-        check_ollama_service()
+        ollama_active = check_ollama_service()
         setup_knowledge_base(tracker)
         service_active = configure_systemd_service(tracker)
     except KeyboardInterrupt:
@@ -709,9 +730,12 @@ def main():
     print(" ¡DESPLIEGUE Y CONFIGURACIÓN COMPLETADOS CON ÉXITO! ")
     print("================================================================================")
     if service_active:
-        print("\nEl agente y el motor LLM están OPERATIVOS Y PERSISTENTES:")
+        print("\nEstado de los servicios del sistema:")
         print("  • Oracle-VectorDesk: Activo y configurado para arranque automático tras reinicio.")
-        print("  • Ollama LLM Engine: Activo y configurado para arranque automático tras reinicio.")
+        if ollama_active:
+            print("  • Ollama LLM Engine: Activo y configurado para arranque automático tras reinicio.")
+        else:
+            print("  • Ollama LLM Engine: [!] Inactivo. Instálalo con: curl -fsSL https://ollama.com/install.sh | sh")
         print("\nComandos útiles para administrar los servicios:")
         print("  • Ver estado del agente:  sudo systemctl status oracle-vectordesk")
         print("  • Ver estado de Ollama:   sudo systemctl status ollama")
