@@ -351,9 +351,17 @@ Oracle Database 26ai recupera el fragmento de `POL-TI-10_Horarios_Guardias_Escal
 Puedes evaluar la suite completa de 20 preguntas de soporte contra la API ejecutando:
 
 ```bash
-python3 run_benchmark.py
+python3 scripts/run_benchmark.py
 ```
-*(Opcional: puedes probar solo las primeras 5 ejecutando `python3 run_benchmark.py 5`)*.
+*(Opcional: puedes probar solo las primeras 5 ejecutando `python3 scripts/run_benchmark.py 5`)*.
+
+### 6.5 Consola Interactiva de Chat para Demos y Pruebas (`chat.py`)
+Para interactuar directamente con el modelo simulando una ventana de chat en tiempo real sin escribir peticiones `curl`:
+
+```bash
+python3 chat.py
+```
+Permite chatear en vivo, ver las respuestas formateadas, los documentos consultados en Oracle 26ai, y la velocidad de inferencia (`tok/s`).
 
 ---
 

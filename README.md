@@ -334,6 +334,30 @@ curl -X POST http://localhost:8000/api/v1/support/resolve \
 python3 scripts/run_benchmark.py
 ```
 
+### 💬 Consola Interactiva de Chat en Terminal (`chat.py` / `scripts/chat_cli.py`)
+¡Ideal para **presentaciones ejecutivas, demostraciones en vivo y validación práctica** sin necesidad de redactar comandos `curl`!
+
+```bash
+# Inicio directo desde la raíz del proyecto:
+python3 chat.py
+
+# O desde scripts con opción de apuntar a una IP o puerto remoto:
+python3 scripts/chat_cli.py --url http://localhost:8000
+```
+
+**Características de la consola de chat:**
+* 🎨 **Interfaz de chat visual:** Diseñada con colores ANSI, indicador animado de procesamiento (*spinner*) y formato limpio de ventana de mensajería.
+* 🤖 **Respuestas enriquecidas:** Despliega la solución del LLM junto con el desglose de documentos citados de Oracle Database 26ai y su similitud semántica.
+* ⚡ **Telemetría en vivo:** Muestra latencia de respuesta (`ms`), total de tokens y velocidad de generación en CPU (`tok/s`).
+* 🏷️ **Control de Tickets:** Incremento automático de tickets (`TCK-1001`, `TCK-1002`, ...) o fijación manual para simular incidencias específicas.
+* ⌨️ **Comandos rápidos en el chat:**
+  * `exit` / `salir` : Cerrar la sesión interactiva.
+  * `clear` / `limpiar` : Limpiar la terminal y mostrar el banner de estado.
+  * `ticket <id>` : Asignar un ID de ticket específico (ej: `ticket INC-5021`).
+  * `ticket reset` : Volver a la generación incremental automática.
+  * `status` / `health` : Consultar en vivo el estado del servicio, base de datos y modelos.
+
+
 ### 🧹 Limpieza y Reinicio de Base de Datos (Mantenimiento)
 Si necesitas reiniciar las pruebas, vaciar la base de conocimiento o reinstalar el agente desde cero:
 ```bash
@@ -371,6 +395,7 @@ Oracle-VectorDesk/
 │   └── init_db.sql               # Inicialización de tablas y columnas VECTOR
 │
 ├── scripts/                      # Herramientas operativas
+│   ├── chat_cli.py               # 💬 Consola interactiva de chat para demos y pruebas
 │   ├── generate_demo_pdfs.py     # Generador de 10 PDFs de prueba con ReportLab
 │   ├── ingest_documents.py       # Ingesta y vectorización de PDFs propios o demo
 │   ├── reset_database.py         # 🧹 Limpieza y purga controlada de tablas vectoriales
@@ -389,6 +414,7 @@ Oracle-VectorDesk/
 │   ├── api_reference.md          # 📡 Referencia completa de endpoints y contratos REST
 │   └── deployment_guide.md       # Manual completo y Troubleshooting
 │
+├── chat.py                       # 💬 Acceso directo para chatear interactivamente en consola
 ├── install.py                    # Asistente interactivo de instalación (Setup Wizard)
 ├── uninstall.py                  # Asistente interactivo de desinstalación y limpieza completa
 ├── run.py                        # Script de inicio del servidor FastAPI
