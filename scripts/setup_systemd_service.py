@@ -14,6 +14,29 @@ from pathlib import Path
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 
+def configure_firewall_port(port: int = 8000):
+    """Verifica y abre el puerto especificado en firewalld si está activo."""
+    if not shutil.which("firewall-cmd"):
+        return
+
+    try:
+        cmd_prefix = [] if os.geteuid() == 0 else ["sudo"]
+        st = subprocess.run(cmd_prefix + ["firewall-cmd", "--state"], capture_output=True, text=True)
+        if st.returncode != 0 or "running" not in st.stdout.lower():
+            return
+
+        qp = subprocess.run(cmd_prefix + ["firewall-cmd", f"--query-port={port}/tcp"], capture_output=True, text=True)
+        if qp.returncode == 0 and "yes" in qp.stdout.lower():
+            print(f"  [✓] Cortafuegos (firewalld): Puerto {port}/tcp ya está abierto.")
+        else:
+            print(f"  [!] Abriendo puerto {port}/tcp permanentemente en firewalld...")
+            subprocess.run(cmd_prefix + ["firewall-cmd", "--permanent", f"--add-port={port}/tcp"], check=True)
+            subprocess.run(cmd_prefix + ["firewall-cmd", "--reload"], check=True)
+            print(f"  [✓] Cortafuegos (firewalld): Puerto {port}/tcp abierto y reglas recargadas.")
+    except Exception as e:
+        print(f"  [!] Nota al verificar cortafuegos: {e}")
+
+
 def setup_systemd(start_now: bool = True):
     if sys.platform != "linux":
         print(f"Aviso: systemd solo está disponible en sistemas Linux (detectado: {sys.platform}).")
@@ -22,6 +45,9 @@ def setup_systemd(start_now: bool = True):
     if not shutil.which("systemctl"):
         print("Aviso: 'systemctl' no está disponible en este sistema operativo.")
         return False
+
+    # Verificar y asegurar apertura de puerto en cortafuegos
+    configure_firewall_port(8000)
 
     current_user = getpass.getuser()
     python_bin = sys.executable

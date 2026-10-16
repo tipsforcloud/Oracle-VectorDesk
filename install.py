@@ -6,6 +6,7 @@ Oracle-VectorDesk: Enterprise Support & Helpdesk RAG on Oracle Database 26ai
 
 import os
 import sys
+import shutil
 import getpass
 import subprocess
 from pathlib import Path
@@ -437,13 +438,42 @@ def setup_knowledge_base():
         print("      y ejecutar: python3 scripts/ingest_documents.py")
 
 
+def configure_firewall_port(port: int = 8000):
+    """Verifica y abre el puerto en firewalld si está activo."""
+    if sys.platform != "linux" or not shutil.which("firewall-cmd"):
+        return
+
+    try:
+        cmd_prefix = [] if os.geteuid() == 0 else ["sudo"]
+        st = subprocess.run(cmd_prefix + ["firewall-cmd", "--state"], capture_output=True, text=True)
+        if st.returncode != 0 or "running" not in st.stdout.lower():
+            return
+
+        qp = subprocess.run(cmd_prefix + ["firewall-cmd", f"--query-port={port}/tcp"], capture_output=True, text=True)
+        if qp.returncode == 0 and "yes" in qp.stdout.lower():
+            print(f"  [✓] Cortafuegos (firewalld): Puerto {port}/tcp ya se encuentra abierto.")
+        else:
+            print(f"  [!] Cortafuegos detectado: El puerto {port}/tcp está bloqueado.")
+            open_fw = input(f"  ¿Deseas abrir el puerto {port}/tcp permanentemente en firewalld? [S/n]: ").strip().lower()
+            if open_fw != 'n':
+                subprocess.run(cmd_prefix + ["firewall-cmd", "--permanent", f"--add-port={port}/tcp"], check=True)
+                subprocess.run(cmd_prefix + ["firewall-cmd", "--reload"], check=True)
+                print(f"  [✓] Puerto {port}/tcp abierto permanentemente y reglas de firewalld recargadas.")
+    except Exception as e:
+        print(f"  [!] Nota al verificar cortafuegos: {e}")
+
+
 def configure_systemd_service():
-    print("\n[6/6] Configuración de Servicio en Segundo Plano (systemd)...")
+    print("\n[6/6] Configuración de Red, Cortafuegos y Servicio en Segundo Plano...")
+    
+    # 1. Verificar y abrir puerto 8000 en firewalld
+    configure_firewall_port(8000)
+
     if sys.platform != "linux":
         print("  Nota: systemd está disponible en servidores Linux (Oracle Linux / Ubuntu). Omitiendo.")
         return False
 
-    install_srv = input("  ¿Deseas registrar e iniciar Oracle-VectorDesk como servicio de systemd? [S/n]: ").strip().lower()
+    install_srv = input("\n  ¿Deseas registrar e iniciar Oracle-VectorDesk como servicio de systemd? [S/n]: ").strip().lower()
     if install_srv != 'n':
         try:
             from scripts.setup_systemd_service import setup_systemd

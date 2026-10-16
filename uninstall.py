@@ -118,8 +118,18 @@ def uninstall_systemd_service():
             print(f"  [✓] Archivo de unidad '{service_path}' eliminado.")
         else:
             print(f"  [i] La unidad '{service_path}' no estaba registrada.")
+
+        # Verificar y cerrar puerto 8000 en firewalld si está abierto
+        if shutil.which("firewall-cmd"):
+            qp = subprocess.run(cmd_prefix + ["firewall-cmd", "--query-port=8000/tcp"], capture_output=True, text=True)
+            if qp.returncode == 0 and "yes" in qp.stdout.lower():
+                close_fw = input("\n  ¿Deseas cerrar el puerto 8000/tcp en firewalld? [S/n]: ").strip().lower()
+                if close_fw != 'n':
+                    subprocess.run(cmd_prefix + ["firewall-cmd", "--permanent", "--remove-port=8000/tcp"], capture_output=True)
+                    subprocess.run(cmd_prefix + ["firewall-cmd", "--reload"], capture_output=True)
+                    print("  [✓] Puerto 8000/tcp cerrado y firewalld recargado.")
     except Exception as e:
-        print(f"  [!] Nota al remover servicio systemd: {e}")
+        print(f"  [!] Nota al remover servicio systemd o cortafuegos: {e}")
 
 
 def clean_oracle_database(env_vars: dict):
