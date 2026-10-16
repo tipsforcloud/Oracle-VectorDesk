@@ -386,7 +386,10 @@ def execute_sql_initialization(user, password, dsn, wallet_dir=None, wallet_pass
         with open(str(sql_file), "r", encoding="utf-8") as f:
             content = f.read()
 
-        statements = [stmt.strip() for stmt in content.split(";") if stmt.strip() and not stmt.strip().startswith("--")]
+        # Filtrar líneas de comentarios para no perder sentencias que inicien con comentario
+        clean_lines = [l for l in content.splitlines() if not l.strip().startswith("--")]
+        statements = [stmt.strip() for stmt in "\n".join(clean_lines).split(";") if stmt.strip()]
+
         for stmt in statements:
             try:
                 cur.execute(stmt)
@@ -394,10 +397,23 @@ def execute_sql_initialization(user, password, dsn, wallet_dir=None, wallet_pass
                 if "ORA-00955" in str(err) or "already exists" in str(err):
                     pass  # Ya existe la tabla o índice
                 else:
-                    print(f"    Nota en sentencia: {err}")
+                    first_line = stmt.splitlines()[0] if stmt.splitlines() else stmt
+                    print(f"    [!] Error en sentencia [{first_line[:40]}...]: {err}")
         conn.commit()
+
+        # Validar que las tablas existan en el esquema
+        cur.execute("""
+            SELECT table_name 
+            FROM user_tables 
+            WHERE table_name IN ('KNOWLEDGE_BASE', 'AGENT_TICKETS_LOG')
+        """)
+        created = [row[0] for row in cur.fetchall()]
         conn.close()
-        print("  [✓] Estructuras de base de datos creadas y listas.")
+
+        if "KNOWLEDGE_BASE" in created and "AGENT_TICKETS_LOG" in created:
+            print(f"  [✓] Estructuras de base de datos creadas y verificadas: {', '.join(created)}")
+        else:
+            print(f"  [!] Advertencia: No se pudieron verificar todas las tablas requeridas. Encontradas: {created}")
 
     except Exception as e:
         print(f"  [!] Error al interactuar con la base de datos: {e}")
