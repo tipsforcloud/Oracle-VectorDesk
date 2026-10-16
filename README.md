@@ -4,12 +4,13 @@
 [![Oracle Cloud Infrastructure](https://img.shields.io/badge/OCI-Compute_E6_(CPU--only)-F80000?logo=oracle&logoColor=white)](https://cloud.oracle.com)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
 [![Ollama](https://img.shields.io/badge/Ollama-Multi--Model_CPU-000000?logo=ollama&logoColor=white)](https://ollama.com)
+[![Open Source](https://badges.frapsoft.com/os/v1/open-source.svg?v=103)](https://github.com/tipsforcloud/Oracle-VectorDesk)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](https://opensource.org/licenses/MIT)
 [![API Docs](https://img.shields.io/badge/API_Docs-Swagger_|_ReDoc-blue?logo=openapi-initiative&logoColor=white)](docs/api_reference.md)
 [![YouTube](https://img.shields.io/badge/YouTube-TipsForCloud-FF0000?logo=youtube&logoColor=white)](https://www.youtube.com/@TipsForCloud)
 [![Web](https://img.shields.io/badge/Web-TipsForCloud.com-0078D4?logo=googlechrome&logoColor=white)](https://tipsforcloud.com)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-> **Agente autónomo de soporte técnico empresarial y Helpdesk de Nivel 1** con arquitectura RAG (*Retrieval-Augmented Generation*), impulsado de forma nativa por **Oracle Database 26ai (AI Vector Search)** e inferencia local en CPU sobre **Oracle Cloud Infrastructure (OCI)**. 
+> **Oracle-VectorDesk** es una solución **100% Open Source** de agente autónomo de soporte técnico empresarial y Helpdesk de Nivel 1 con arquitectura RAG (*Retrieval-Augmented Generation*), impulsado de forma nativa por **Oracle Database 26ai (AI Vector Search)** e inferencia local en CPU sobre **Oracle Cloud Infrastructure (OCI)**. 
 > 
 > **Ultra bajo costo:** Operación mensual predecible desde **$100.76 USD / mes** (en base de datos existente / BYOL) hasta **$421.60 USD / mes** (infraestructura dedicada 100% nueva en OCI), sin requerir costosas GPUs ni cargos por token de terceros.
 
@@ -17,6 +18,7 @@
 
 ## 🌟 Características Principales
 
+* 🔓 **100% Open Source (Licencia MIT):** Código abierto, auditable, personalizable y libre de ataduras (*zero vendor lock-in*). Puedes adaptarlo y desplegarlo en cualquier entorno corporativo.
 * **"Bring AI to the Data":** Todo el conocimiento corporativo reside y se consulta dentro de Oracle Database 26ai mediante columnas nativas `VECTOR(768, FLOAT32)` y la función `VECTOR_DISTANCE(..., COSINE)`. Los datos sensibles de la empresa nunca viajan a nubes de terceros ni a bases de datos vectoriales externas.
 * **100% Inferencia en CPU con Selector Multi-Modelo:** Inferencia local sin GPUs sobre procesadores AMD EPYC / Intel Xeon en OCI Compute. Permite elegir interactivamente entre **Qwen 2.5 3B** (por defecto, ~2.5s de latencia), **Qwen 2.5 7B**, **Llama 3.2 3B**, **Phi 3.5 3.8B** o modelos personalizados de Ollama.
 * **Detector Inteligente de Saludos (Small-Talk):** Reconoce expresiones de cortesía y saludos cotidianos (*"Hola"*, *"Buenos días"*, etc.) y responde de forma cordial e inmediata (< 5 ms) sin activar falsos escalamientos a soporte humano.
@@ -472,4 +474,4 @@ Este proyecto es desarrollado y mantenido por **TipsForCloud**, iniciativa dedic
 ---
 
 ## 📄 Licencia
-Este proyecto se distribuye bajo la licencia **MIT**. Consulta el archivo [LICENSE](LICENSE) para más información.
+Este proyecto es **100% Open Source** y se distribuye libremente bajo la licencia permisiva **MIT**. Eres libre de usarlo, modificarlo, bifurcarlo e integrarlo en proyectos comerciales o comunitarios sin restricciones. Consulta el archivo [LICENSE](LICENSE) para más detalles.
