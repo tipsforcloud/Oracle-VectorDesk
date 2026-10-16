@@ -37,7 +37,7 @@ flowchart TD
     subgraph VM_Compute ["OCI Compute E6 (Inferencia y API Backend)"]
         API["API REST Backend (FastAPI / Uvicorn :8000)"]
         EmbedModel["Modelo Embeddings CPU (intfloat/multilingual-e5-base 768d)"]
-        Ollama["Motor LLM en CPU (qwen3:4b / qwen2.5)"]
+        Ollama["Motor LLM en CPU (qwen2.5:3b / qwen2.5)"]
     end
 
     subgraph Oracle_DB ["Oracle Database 26ai (Vector Store en VCN)"]
@@ -130,7 +130,7 @@ Oracle-VectorDesk está diseñado para operar con máxima eficiencia en **todas 
 ```bash
 # Instalar Ollama y descargar Qwen3 4B (ultrarrápido en CPU)
 curl -fsSL https://ollama.com/install.sh | sh
-ollama pull qwen3:4b
+ollama pull qwen2.5:3b
 
 # Abrir el puerto 8000 en el firewall del sistema operativo
 sudo firewall-cmd --permanent --add-port=8000/tcp
@@ -227,7 +227,7 @@ curl http://localhost:8000/health
   "status": "ok",
   "database": "Oracle Database 26ai AI Vector Search",
   "embedding_model": "intfloat/multilingual-e5-base (768 dims)",
-  "llm_model": "qwen3:4b"
+  "llm_model": "qwen2.5:3b"
 }
 ```
 
@@ -280,7 +280,7 @@ python3 uninstall.py
 > Permite de forma interactiva y modular:
 > * Detener y desinstalar el servicio systemd (`oracle-vectordesk.service`).
 > * Purgar las tablas vectoriales o eliminar completamente el usuario en Oracle 26ai (`DROP USER ... CASCADE` vía SQL*Net con usuario DBA).
-> * Eliminar los modelos LLM descargados (`qwen3:4b`, etc.) o desinstalar completamente el servicio y binario de Ollama.
+> * Eliminar los modelos LLM descargados (`qwen2.5:3b`, etc.) o desinstalar completamente el servicio y binario de Ollama.
 > * Limpiar archivos `.env`, datasets demo y cachés locales.
 
 ---

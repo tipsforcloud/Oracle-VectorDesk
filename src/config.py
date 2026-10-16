@@ -26,7 +26,7 @@ WALLET_PASSWORD = os.getenv("WALLET_PASSWORD", None)
 
 # Configuración del Motor de Inferencia en CPU (Ollama)
 OLLAMA_URL = os.getenv("OLLAMA_URL", "http://localhost:11434/api/generate")
-OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "qwen3:4b")
+OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "qwen2.5:3b")
 
 # Configuración del Modelo de Embeddings
 EMBEDDING_MODEL_NAME = os.getenv("EMBEDDING_MODEL_NAME", "intfloat/multilingual-e5-base")

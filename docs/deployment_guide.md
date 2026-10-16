@@ -239,7 +239,7 @@ DB_USER=app_support
 DB_PASSWORD=TuPasswordSeguro123!
 DB_DSN=dbhost.sub.yourvcn.oraclevcn.com:1521/pdb1.sub.yourvcn.oraclevcn.com
 OLLAMA_URL=http://localhost:11434/api/generate
-OLLAMA_MODEL=qwen3:4b
+OLLAMA_MODEL=qwen2.5:3b
 EOF
 ```
 

@@ -2,7 +2,7 @@
 
 > **Servicio:** Backend de Resolución de Tickets con IA y Búsqueda Vectorial Nativa  
 > **Motor de Base de Datos:** Oracle Database 26ai / 23ai (AI Vector Search)  
-> **Motor de Inferencia:** Ollama en CPU (`qwen3:4b` / `qwen2.5`)  
+> **Motor de Inferencia:** Ollama en CPU (`qwen2.5:3b` / `qwen2.5`)  
 > **Puerto por Defecto:** `8000`  
 > **Formato de Comunicación:** JSON (`application/json`)  
 
@@ -47,7 +47,7 @@ curl -X GET http://localhost:8000/health
   "status": "ok",
   "database": "Oracle Database 26ai AI Vector Search",
   "embedding_model": "intfloat/multilingual-e5-base (768 dims)",
-  "llm_model": "qwen3:4b",
+  "llm_model": "qwen2.5:3b",
   "dsn": "dbhost.sub.yourvcn.oraclevcn.com:1521/pdb1.sub.yourvcn.oraclevcn.com"
 }
 ```
@@ -71,7 +71,7 @@ Punto de entrada principal para recibir preguntas técnicas de usuarios, consult
 1. **Vectorización:** Convierte el texto `user_query` en un vector denso de 768 dimensiones tipo `float32` usando el modelo `intfloat/multilingual-e5-base` en CPU.
 2. **Retrieval en Oracle 26ai:** Ejecuta un SQL con la función nativa `VECTOR_DISTANCE(embedding, :query_vec, COSINE)` ordenado ascendentemente con `FETCH FIRST 3 ROWS ONLY`.
 3. **Control Anti-Alucinación:** Si el score semántico más alto es menor a `SIMILARITY_THRESHOLD` (`0.35` por defecto), el agente **no inventa información** y activa el escalamiento a soporte humano.
-4. **Generación Aumentada (LLM):** Si supera el umbral, ensambla el contexto recuperado de Oracle en un prompt estricto y consulta a Ollama (`qwen3:4b`).
+4. **Generación Aumentada (LLM):** Si supera el umbral, ensambla el contexto recuperado de Oracle en un prompt estricto y consulta a Ollama (`qwen2.5:3b`).
 5. **Auditoría:** Registra la interacción, la pregunta, el contexto, la latencia en ms y el puntaje de similitud en la tabla `AGENT_TICKETS_LOG`.
 
 #### Petición HTTP:

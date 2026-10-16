@@ -391,7 +391,7 @@ def setup_database_config(tracker=None):
         "",
         "# Inferencia en CPU (Ollama)",
         "OLLAMA_URL=http://localhost:11434/api/generate",
-        "OLLAMA_MODEL=qwen3:4b",
+        "OLLAMA_MODEL=qwen2.5:3b",
         "",
         "# Modelo de Embeddings y Umbral",
         "EMBEDDING_MODEL_NAME=intfloat/multilingual-e5-base",
@@ -607,17 +607,17 @@ def check_ollama_service():
 
     print("  [✓] Servicio Ollama activo y respondiendo correctamente en http://localhost:11434.")
 
-    # 6. Verificar y descargar el modelo local requerido (qwen3:4b)
-    target_model = "qwen3:4b"
+    # 6. Verificar y descargar el modelo local requerido (qwen2.5:3b)
+    target_model = "qwen2.5:3b"
     try:
         resp = requests.get("http://localhost:11434/api/tags", timeout=5)
         models = [m.get("name") for m in resp.json().get("models", [])]
-        has_model = any(target_model in m.lower() or "qwen3" in m.lower() for m in models)
+        has_model = any(target_model in m.lower() for m in models)
 
         if has_model:
             print(f"  [✓] Modelo '{target_model}' ya disponible localmente en Ollama.")
         else:
-            print(f"\n  -> Descargando modelo '{target_model}' para inferencia local en CPU (aprox. 2.5 GB)...")
+            print(f"\n  -> Descargando modelo '{target_model}' para inferencia local ultrarrápida en CPU (aprox. 1.9 GB)...")
             print("     Por favor espera mientras se descarga y extrae el modelo...")
             pull_cmd = [ollama_bin or "ollama", "pull", target_model]
             ret = subprocess.run(pull_cmd)
