@@ -3,7 +3,7 @@
 [![Oracle Database](https://img.shields.io/badge/Oracle_Database-26ai_|_23ai-F80000?logo=oracle&logoColor=white)](https://www.oracle.com/database/)
 [![Oracle Cloud Infrastructure](https://img.shields.io/badge/OCI-Compute_E6_(CPU--only)-F80000?logo=oracle&logoColor=white)](https://cloud.oracle.com)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
-[![Ollama](https://img.shields.io/badge/Ollama-Qwen3_4B-000000?logo=ollama&logoColor=white)](https://ollama.com)
+[![Ollama](https://img.shields.io/badge/Ollama-Multi--Model_CPU-000000?logo=ollama&logoColor=white)](https://ollama.com)
 [![API Docs](https://img.shields.io/badge/API_Docs-Swagger_|_ReDoc-blue?logo=openapi-initiative&logoColor=white)](docs/api_reference.md)
 [![YouTube](https://img.shields.io/badge/YouTube-TipsForCloud-FF0000?logo=youtube&logoColor=white)](https://www.youtube.com/@TipsForCloud)
 [![Web](https://img.shields.io/badge/Web-TipsForCloud.com-0078D4?logo=googlechrome&logoColor=white)](https://tipsforcloud.com)
@@ -18,10 +18,12 @@
 ## 🌟 Características Principales
 
 * **"Bring AI to the Data":** Todo el conocimiento corporativo reside y se consulta dentro de Oracle Database 26ai mediante columnas nativas `VECTOR(768, FLOAT32)` y la función `VECTOR_DISTANCE(..., COSINE)`. Los datos sensibles de la empresa nunca viajan a nubes de terceros ni a bases de datos vectoriales externas.
-* **100% Inferencia en CPU (Sin GPUs):** Ejecuta **Qwen3 4B** (o Qwen 2.5 7B) en CPU sobre procesadores AMD EPYC en instancias `VM.Standard.E6.Flex`, optimizando el consumo de RAM a solo ~2.5 GB y duplicando la velocidad de generación con latencias de 4 a 6 segundos.
-* **Tolerancia Cero a la Alucinación:** Incorpora un umbral estricto de similitud semántica (`similarity < 0.35`). Si la consulta del usuario no tiene respaldo documental comprobado en Oracle, el agente **no inventa** y escala automáticamente el caso a soporte humano.
-* **Auditoría Empresarial Nativa:** Cada interacción, latencia en milisegundos, nivel de confianza y contexto recuperado se persiste automáticamente en la tabla `AGENT_TICKETS_LOG`.
-* **Wizard Interactivo de Instalación:** Incluye `install.py` para validar conectividad con el DBSystem, configurar variables, crear DDLs vectoriales e ingestar datos en minutos.
+* **100% Inferencia en CPU con Selector Multi-Modelo:** Inferencia local sin GPUs sobre procesadores AMD EPYC / Intel Xeon en OCI Compute. Permite elegir interactivamente entre **Qwen 2.5 3B** (por defecto, ~2.5s de latencia), **Qwen 2.5 7B**, **Llama 3.2 3B**, **Phi 3.5 3.8B** o modelos personalizados de Ollama.
+* **Detector Inteligente de Saludos (Small-Talk):** Reconoce expresiones de cortesía y saludos cotidianos (*"Hola"*, *"Buenos días"*, etc.) y responde de forma cordial e inmediata (< 5 ms) sin activar falsos escalamientos a soporte humano.
+* **Tolerancia Cero a la Alucinación (Safe Fallback):** Incorpora un umbral estricto de similitud semántica (`similarity < 0.35`). Si la consulta del usuario no tiene respaldo documental comprobado en Oracle, el agente **no inventa** y escala automáticamente el caso a un técnico humano.
+* **Telemetría y Observabilidad en Tiempo Real:** Cada respuesta de la API y ejecución de benchmark expone en vivo el número de `tokens_generated`, la velocidad de generación `tokens_per_second` y el tiempo de ejecución en milisegundos.
+* **Setup Wizard con Rollback Automático (`install.py`):** Asistente paso a paso que valida conectividad con la BD, instala Ollama desatendidamente con permisos de Linux, descarga el modelo elegido, crea las estructuras vectoriales y registra servicios en `systemd`. Si ocurre algún error o interrupción (`Ctrl+C`), **revierte automáticamente todo lo creado**.
+* **Auditoría Empresarial Nativa:** Cada interacción, latencia en ms, nivel de confianza y contexto recuperado se persiste automáticamente en la tabla `AGENT_TICKETS_LOG`.
 * **Dataset Demo Completo:** Generador de 10 documentos PDF corporativos y suite automatizada de benchmark con 20 preguntas reales para evaluar precisión y tiempos de respuesta.
 
 ---
@@ -36,8 +38,9 @@ flowchart TD
 
     subgraph VM_Compute ["OCI Compute E6 (Inferencia y API Backend)"]
         API["API REST Backend (FastAPI / Uvicorn :8000)"]
+        Greeting["Detector de Saludos (Small-Talk < 5ms)"]
         EmbedModel["Modelo Embeddings CPU (intfloat/multilingual-e5-base 768d)"]
-        Ollama["Motor LLM en CPU (qwen2.5:3b / qwen2.5)"]
+        Ollama["Motor LLM en CPU (Qwen 2.5 / Llama 3.2 / Phi 3.5)"]
     end
 
     subgraph Oracle_DB ["Oracle Database 26ai (Vector Store en VCN)"]
@@ -50,7 +53,9 @@ flowchart TD
     end
 
     User -->|"1. POST /api/v1/support/resolve"| API
-    API -->|"2. Vectorizar consulta"| EmbedModel
+    API -->|"¿Es saludo puro?"| Greeting
+    Greeting -->|"Respuesta cordial inmediata"| User
+    API -->|"2. Vectorizar consulta técnica"| EmbedModel
     EmbedModel -->|"3. Vector Float32 (768d)"| API
     API -->|"4. SQL con VECTOR_DISTANCE(..., COSINE)"| KB_Table
     KB_Table -->|"5. Top 3 artículos + similitud"| API
@@ -58,10 +63,10 @@ flowchart TD
     API -->|"Similitud menor a 0.35"| Escalar
     Escalar -->|"Transferencia de caso"| User
     
-    API -->|"6. Prompt estricto + Contexto recuperado"| Ollama
-    Ollama -->|"7. Respuesta generada"| API
+    API -->|"6. Prompt empático + Contexto"| Ollama
+    Ollama -->|"7. Respuesta generada + Tokens/s"| API
     API -->|"8. Registro de auditoría"| Audit_Table
-    API -->|"9. Respuesta JSON con fuentes"| User
+    API -->|"9. Respuesta JSON (Tokens + Fuentes)"| User
 ```
 
 ---
@@ -144,9 +149,23 @@ cd Oracle-VectorDesk
 ```
 
 ### 3. Ejecutar el Asistente Interactivo de Instalación 🧙‍♂️
-El asistente automatiza la configuración completa conectándose a través del protocolo estándar de base de datos **SQL*Net (puerto 1521)**:
+El asistente (`install.py`) automatiza el 100% de la configuración y valida la infraestructura conectándose por **SQL*Net (puerto 1521)**:
 * **Modo 1 (Oracle Base Database Service en VM / On-Prem / Contenedor):** Conexión directa TCP con el usuario previamente creado (`app_support`). El instalador instala Oracle Instant Client automáticamente, detecta tablas existentes, ejecuta el DDL vectorial nativo e indexa el contenido.
 * **Modo 2 (Autonomous AI Database Serverless):** Despliegue sobre ADB Serverless con Wallet mTLS (usuario `ADMIN` o `app_support`).
+
+#### 🎛️ Capacidades Automatizadas del Instalador:
+1. **Selector Interactivo de Modelos LLM para CPU:** Permite elegir el balance perfecto entre velocidad y profundidad técnica:
+   ```text
+   [4/6] Configuración Integral del Motor LLM en CPU (Ollama)...
+     1) qwen2.5:3b  [Por defecto] - Ultra-rápido (~2-4s), 1.9 GB RAM. Excelente en español y RAG.
+     2) qwen2.5:7b  - Máxima precisión técnica (~8-12s), 4.7 GB RAM. Ideal para respuestas complejas.
+     3) llama3.2:3b - Modelo ligero de Meta (~3-5s), 2.0 GB RAM. Conciso, moderno y equilibrado.
+     4) phi3.5:3.8b - Modelo de Microsoft (~4-6s), 2.2 GB RAM. Excelente seguimiento lógico.
+     5) Personalizado (especificar cualquier otro modelo de Ollama, ej: mistral:7b, qwen3:4b)
+   ```
+2. **Auto-Instalación de Ollama y Permisos en Linux:** Si Ollama no está instalado, ejecuta el instalador oficial, configura los permisos de almacenamiento en `/usr/share/ollama` (evitando errores de `permission denied` en RHEL/Oracle Linux) y descarga el modelo elegido automáticamente.
+3. **Mecanismo de Rollback Automático (`InstallationTracker`):** Si la instalación se interrumpe con `Ctrl+C` o se produce un fallo de conectividad, el asistente **deshace automáticamente cada cambio** (elimina tablas creadas en Oracle, restaura el `.env`, limpia PDFs demo y apaga servicios huérfanos).
+4. **Auto-arranque con `systemd`:** Registra y habilita tanto `ollama.service` como `oracle-vectordesk.service` con auto-inicio garantizado tras reinicios del servidor.
 
 > [!IMPORTANT]
 > Asegúrate de haber creado el usuario `app_support` en la PDB (como se indica en el Paso 1) antes de lanzar el asistente.
@@ -227,11 +246,36 @@ curl http://localhost:8000/health
   "status": "ok",
   "database": "Oracle Database 26ai AI Vector Search",
   "embedding_model": "intfloat/multilingual-e5-base (768 dims)",
-  "llm_model": "qwen2.5:3b"
+  "llm_model": "qwen2.5:3b (online)",
+  "dsn": "dbhost.sub.yourvcn.oraclevcn.com:1521/pdb1.sub.yourvcn.oraclevcn.com"
 }
 ```
 
-### Resolver un Ticket Real
+### 2. Probar Saludo de Cortesía / Small-Talk (< 5 ms)
+Verifica que el agente responda de forma cálida e inmediata a saludos sin activar falsos escalamientos:
+```bash
+curl -X POST http://localhost:8000/api/v1/support/resolve \
+  -H "Content-Type: application/json" \
+  -d '{
+    "ticket_id": "TCK-HELLO",
+    "user_query": "¡Hola! Buenos días, ¿cómo estás?"
+  }'
+```
+*Respuesta:*
+```json
+{
+  "ticket_id": "TCK-HELLO",
+  "user_query": "¡Hola! Buenos días, ¿cómo estás?",
+  "suggested_resolution": "¡Hola! 👋 Qué gusto saludarte. Soy tu asistente inteligente de soporte técnico y helpdesk corporativo, impulsado por Oracle Database 26ai. Estoy aquí para guiarte paso a paso con incidencias, accesos, procedimientos de TI y políticas de la empresa. ¿En qué te puedo colaborar el día de hoy?",
+  "confidence_score": 1.0,
+  "sources": [],
+  "execution_time_ms": 3,
+  "tokens_generated": 0,
+  "tokens_per_second": 0.0
+}
+```
+
+### 3. Resolver un Ticket Real con RAG e Inferencia Local
 ```bash
 curl -X POST http://localhost:8000/api/v1/support/resolve \
   -H "Content-Type: application/json" \
@@ -246,18 +290,42 @@ curl -X POST http://localhost:8000/api/v1/support/resolve \
 {
   "ticket_id": "TCK-1001",
   "user_query": "¿Cuál es la línea telefónica y el código PIN de emergencia para activar la guardia de soporte crítico fuera de horario?",
-  "suggested_resolution": "Para activar la guardia de soporte crítico en incidentes de Severidad 1 (P1) fuera de horario, se debe marcar la línea internacional +1-800-555-0199 e ingresar el PIN de emergencia 9911.\n\nSi necesitas asistencia adicional, comunícate con la línea del SOC en la ext. 9111.",
-  "confidence_score": 0.8807,
+  "suggested_resolution": "¡Hola! Con mucho gusto te ayudo con esta gestión.\n\nPara activar la guardia de soporte crítico fuera de horario, debes seguir estos pasos:\n\n1. Marca la línea telefónica de emergencia internacional: +1-800-555-0199.\n2. Ingresa el código PIN de emergencia: 9911.\n\nEste procedimiento aplica exclusivamente para incidentes de severidad crítica (Sev-1). Si requieres asistencia adicional, no dudes en consultarme.",
+  "confidence_score": 0.8813,
   "sources": [
     {
-      "id": 9,
-      "title": "Horarios Guardias Escalamiento Soporte Critico",
-      "similarity": 0.8807
+      "id": 5,
+      "title": "Guardias Escalamiento Soporte Critico",
+      "similarity": 0.8813
     }
   ],
   "execution_time_ms": 2850,
   "tokens_generated": 85,
   "tokens_per_second": 29.82
+}
+```
+
+### 4. Probar Control Anti-Alucinación (Safe Fallback)
+Si la consulta no tiene sustento en la base de conocimiento (`similarity < 0.35`), el agente transfiere el caso de forma segura:
+```bash
+curl -X POST http://localhost:8000/api/v1/support/resolve \
+  -H "Content-Type: application/json" \
+  -d '{
+    "ticket_id": "TCK-9999",
+    "user_query": "¿Cuál es el menú del almuerzo de hoy en la cafetería?"
+  }'
+```
+*Respuesta:*
+```json
+{
+  "ticket_id": "TCK-9999",
+  "user_query": "¿Cuál es el menú del almuerzo de hoy en la cafetería?",
+  "suggested_resolution": "No se encontró documentación suficiente en la base de conocimiento para resolver este ticket automáticamente. Se escala a un agente humano de soporte.",
+  "confidence_score": 0.1742,
+  "sources": [],
+  "execution_time_ms": 138,
+  "tokens_generated": 0,
+  "tokens_per_second": 0.0
 }
 ```
 

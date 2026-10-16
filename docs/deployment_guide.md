@@ -253,20 +253,20 @@ pip3 install --break-system-packages reportlab pypdf
 
 2. **Generar los 10 PDFs de demostración:**
 ```bash
-python3 generate_sample_pdfs.py
+python3 scripts/generate_demo_pdfs.py
 ```
-*Esto generará 10 archivos PDF en la carpeta `docs_demo/` con políticas realistas de Wi-Fi, renovación de laptops, MFA, ERP SAP, BYOD, OneDrive, offboarding, phishing, impresión PaperCut y guardias 24/7.*
+*Esto generará 10 archivos PDF en la carpeta `data/demo_docs/` con políticas realistas de Wi-Fi, renovación de laptops, MFA, ERP SAP, BYOD, OneDrive, offboarding, phishing, impresión PaperCut y guardias 24/7.*
 
 3. **Ejecutar la ingesta de los PDFs hacia Oracle Database 26ai:**
 ```bash
-python3 ingest_pdfs.py
+python3 scripts/ingest_documents.py
 ```
 *Salida esperada:*
 ```
 ================================================================================
  INGESTA DE DOCUMENTOS PDF EN ORACLE DATABASE 26ai (AI VECTOR SEARCH) 
 ================================================================================
-Directorio de documentos: /root/agente_soporte_rag/docs_demo
+Directorio de documentos: data/demo_docs
 Total de PDFs detectados: 10
 Destino: Oracle Database 26ai @ dbhost... (Usuario: app_support)
 
