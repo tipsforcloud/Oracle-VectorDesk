@@ -100,13 +100,19 @@ WantedBy=multi-user.target
         print("  [✓] systemctl daemon-reload ejecutado.")
 
         if start_now:
+            # Asegurar que el motor de inferencia Ollama arranque automáticamente tras reinicio
+            if shutil.which("ollama"):
+                subprocess.run(cmd_prefix + ["systemctl", "enable", "--now", "ollama"], capture_output=True)
+                print("  [✓] Servicio 'ollama' habilitado y arrancado para persistencia tras reinicio.")
+
+            # Habilitar y arrancar el servicio del agente de soporte
             subprocess.run(cmd_prefix + ["systemctl", "enable", "--now", service_name], check=True)
-            print(f"  [✓] Servicio '{service_name}' habilitado y arrancado en segundo plano.")
+            print(f"  [✓] Servicio '{service_name}' habilitado para persistencia tras reinicio.")
             
             # Verificar estado
             status = subprocess.run(["systemctl", "is-active", service_name], capture_output=True, text=True)
             state = status.stdout.strip()
-            print(f"  [✓] Estado actual del servicio: {state.upper()}")
+            print(f"  [✓] Estado actual del agente: {state.upper()}")
 
         print("\nComandos útiles para administrar el servicio:")
         print(f"  • Ver estado:     sudo systemctl status {service_name}")

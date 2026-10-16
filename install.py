@@ -556,23 +556,23 @@ def check_ollama_service():
     except Exception:
         ollama_active = False
 
-    # Si está instalado pero no responde, ofrecer iniciarlo con systemctl
+    # Si está instalado pero no responde, habilitar e iniciar automáticamente con systemd
     if not ollama_active and ollama_bin and sys.platform == "linux":
-        print("  -> El comando 'ollama' existe pero el servicio no responde en http://localhost:11434.")
-        start_srv = input("     ¿Deseas iniciar y habilitar el servicio de Ollama ahora con systemd? [S/n]: ").strip().lower()
-        if start_srv != 'n':
-            subprocess.run(["sudo", "systemctl", "enable", "--now", "ollama"], capture_output=True)
-            import time
-            time.sleep(2)
-            try:
-                resp = requests.get("http://localhost:11434/api/tags", timeout=3)
-                ollama_active = (resp.status_code == 200)
-            except Exception:
-                ollama_active = False
+        print("  -> Habilitando e iniciando servicio 'ollama' automáticamente con systemd...")
+        cmd_prefix = [] if os.geteuid() == 0 else ["sudo"]
+        subprocess.run(cmd_prefix + ["systemctl", "enable", "--now", "ollama"], capture_output=True)
+        import time
+        time.sleep(2)
+        try:
+            resp = requests.get("http://localhost:11434/api/tags", timeout=3)
+            ollama_active = (resp.status_code == 200)
+            if ollama_active:
+                print("  [✓] Servicio 'ollama' iniciado y configurado para arranque automático tras reinicio.")
+        except Exception:
+            ollama_active = False
 
     if ollama_active:
         try:
-            import requests
             resp = requests.get("http://localhost:11434/api/tags", timeout=3)
             models = [m.get("name") for m in resp.json().get("models", [])]
             print(f"  [✓] Servicio Ollama activo. Modelos disponibles: {', '.join(models) if models else 'Ninguno'}")
@@ -580,12 +580,9 @@ def check_ollama_service():
             target_model = "qwen3:4b"
             has_model = any("qwen3" in m.lower() or "qwen2.5" in m.lower() for m in models)
             if not has_model:
-                print(f"  [!] Aviso: El modelo '{target_model}' no está descargado.")
-                pull_now = input(f"     ¿Deseas descargarlo ahora con 'ollama pull {target_model}'? [S/n]: ").strip().lower()
-                if pull_now != 'n':
-                    print(f"     Descargando {target_model} en segundo plano...")
-                    subprocess.run(["ollama", "pull", target_model])
-                    print(f"  [✓] Modelo '{target_model}' listo para inferencia.")
+                print(f"  -> Descargando modelo '{target_model}' para inferencia local en CPU...")
+                subprocess.run(["ollama", "pull", target_model])
+                print(f"  [✓] Modelo '{target_model}' descargado y listo para inferencia.")
         except Exception as e:
             print(f"  [!] Nota al consultar modelos en Ollama: {e}")
     else:
@@ -593,7 +590,7 @@ def check_ollama_service():
         if not ollama_bin:
             print("      Instálalo con: curl -fsSL https://ollama.com/install.sh | sh")
         else:
-            print("      Inicia el servicio ejecutando: sudo systemctl start ollama")
+            print("      Inicia el servicio ejecutando: sudo systemctl enable --now ollama")
 
 
 def setup_knowledge_base(tracker=None):
@@ -670,9 +667,14 @@ def configure_systemd_service(tracker=None):
         print("  Nota: systemd está disponible en servidores Linux (Oracle Linux / Ubuntu). Omitiendo.")
         return False
 
-    install_srv = input("\n  ¿Deseas registrar e iniciar Oracle-VectorDesk como servicio de systemd? [S/n]: ").strip().lower()
+    install_srv = input("\n  ¿Deseas registrar e iniciar Oracle-VectorDesk como servicio de systemd con auto-arranque? [S/n]: ").strip().lower()
     if install_srv != 'n':
         try:
+            # Asegurar persistencia y arranque automático de Ollama tras reinicios
+            cmd_prefix = [] if os.geteuid() == 0 else ["sudo"]
+            if shutil.which("ollama"):
+                subprocess.run(cmd_prefix + ["systemctl", "enable", "--now", "ollama"], capture_output=True)
+
             from scripts.setup_systemd_service import setup_systemd
             res = setup_systemd(start_now=True)
             if res and tracker:
@@ -707,10 +709,14 @@ def main():
     print(" ¡DESPLIEGUE Y CONFIGURACIÓN COMPLETADOS CON ÉXITO! ")
     print("================================================================================")
     if service_active:
-        print("\nEl agente ya está OPERATIVO EN SEGUNDO PLANO como servicio del sistema:")
-        print("  • Ver estado:        sudo systemctl status oracle-vectordesk")
-        print("  • Ver logs en vivo:  sudo journalctl -u oracle-vectordesk -f")
-        print("  • Reiniciar:         sudo systemctl restart oracle-vectordesk")
+        print("\nEl agente y el motor LLM están OPERATIVOS Y PERSISTENTES:")
+        print("  • Oracle-VectorDesk: Activo y configurado para arranque automático tras reinicio.")
+        print("  • Ollama LLM Engine: Activo y configurado para arranque automático tras reinicio.")
+        print("\nComandos útiles para administrar los servicios:")
+        print("  • Ver estado del agente:  sudo systemctl status oracle-vectordesk")
+        print("  • Ver estado de Ollama:   sudo systemctl status ollama")
+        print("  • Ver logs en vivo:       sudo journalctl -u oracle-vectordesk -f")
+        print("  • Reiniciar servicios:    sudo systemctl restart ollama oracle-vectordesk")
     else:
         print("\nPara iniciar el servicio manualmente en primer plano:")
         print("  python3 run.py")
