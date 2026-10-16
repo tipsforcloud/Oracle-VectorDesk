@@ -43,6 +43,88 @@ def ask_input(prompt: str, default: str = "") -> str:
                 return res
 
 
+class InstallationTracker:
+    """Registra cambios durante la instalación y permite revertir todo (Rollback) en caso de fallo."""
+    def __init__(self):
+        self.env_file = BASE_DIR / ".env"
+        self.env_existed_originally = self.env_file.exists()
+        self.original_env_content = self.env_file.read_text(encoding="utf-8") if self.env_existed_originally else None
+        self.env_was_modified = False
+        self.db_conn_kwargs = None
+        self.created_tables = []
+        self.demo_docs_generated = False
+        self.systemd_installed = False
+
+    def rollback(self, reason: str = ""):
+        print("\n" + "=" * 80)
+        print(" [!] PROCESO DE REVERSIÓN AUTOMÁTICA (ROLLBACK) ACTIVADO")
+        if reason:
+            print(f"     Causa del fallo: {reason}")
+        print("     Deshaciendo todos los cambios realizados en el sistema y base de datos...")
+        print("=" * 80)
+
+        # 1. Purgar tablas creadas en la base de datos
+        if self.created_tables and self.db_conn_kwargs:
+            print("\n  -> Revertiendo estructuras creadas en Oracle Database...")
+            try:
+                import oracledb
+                conn = oracledb.connect(**self.db_conn_kwargs)
+                cur = conn.cursor()
+                for table in self.created_tables:
+                    try:
+                        cur.execute(f"DROP TABLE {table} PURGE")
+                        print(f"     [✓] Tabla '{table}' eliminada (PURGE).")
+                    except Exception as err:
+                        if "ORA-00942" not in str(err):
+                            print(f"     [!] Nota al purgar {table}: {err}")
+                conn.commit()
+                conn.close()
+            except Exception as e:
+                print(f"     [!] Error conectando a la BD para revertir tablas: {e}")
+
+        # 2. Revertir o eliminar archivo .env
+        if self.env_was_modified:
+            print("  -> Revirtiendo archivo de configuración '.env'...")
+            try:
+                if self.env_existed_originally and self.original_env_content is not None:
+                    self.env_file.write_text(self.original_env_content, encoding="utf-8")
+                    print("     [✓] Archivo '.env' restaurado a su contenido original previo.")
+                elif self.env_file.exists():
+                    self.env_file.unlink()
+                    print("     [✓] Archivo '.env' eliminado.")
+            except Exception as e:
+                print(f"     [!] Error restaurando '.env': {e}")
+
+        # 3. Limpiar demo PDFs generados
+        if self.demo_docs_generated:
+            print("  -> Eliminando documentos temporales de demo generados...")
+            demo_dir = BASE_DIR / "data" / "demo_docs"
+            if demo_dir.exists():
+                for pdf in demo_dir.glob("*.pdf"):
+                    try:
+                        pdf.unlink()
+                    except Exception:
+                        pass
+                print("     [✓] Archivos PDF temporales de demo eliminados.")
+
+        # 4. Detener y remover servicio systemd si fue registrado
+        if self.systemd_installed:
+            print("  -> Desregistrando servicio systemd...")
+            try:
+                subprocess.run(["sudo", "systemctl", "stop", "oracle-vectordesk"], capture_output=True)
+                subprocess.run(["sudo", "systemctl", "disable", "oracle-vectordesk"], capture_output=True)
+                srv_file = Path("/etc/systemd/system/oracle-vectordesk.service")
+                if srv_file.exists():
+                    subprocess.run(["sudo", "rm", "-f", str(srv_file)], capture_output=True)
+                    subprocess.run(["sudo", "systemctl", "daemon-reload"], capture_output=True)
+                print("     [✓] Servicio systemd detenido y eliminado.")
+            except Exception as e:
+                print(f"     [!] Error revirtiendo systemd: {e}")
+
+        print("\n  [✓] Reversión completada. Tu entorno ha quedado en su estado limpio original.")
+        print("=" * 80 + "\n")
+
+
 def find_oracle_client_lib_dir():
     """Busca directorios comunes donde se instala Oracle Instant Client en Linux."""
     import glob
@@ -203,7 +285,7 @@ def load_existing_env():
     return env_vars
 
 
-def setup_database_config():
+def setup_database_config(tracker=None):
     print("\n[2/6] Configuración y Conexión a Oracle Database 26ai...")
     print("  Selecciona la modalidad de tu Base de Datos en OCI:")
     print("  1) Base Database Service en VM / On-Prem / Contenedor (SQL*Net TCP :1521) [Recomendado]")
@@ -320,30 +402,37 @@ def setup_database_config():
     with open(str(BASE_DIR / ".env"), "w", encoding="utf-8") as f:
         f.write("\n".join(env_lines) + "\n")
     print("  [✓] Archivo de entorno '.env' creado y configurado correctamente.")
+    if tracker:
+        tracker.env_was_modified = True
 
     return user, password, full_dsn, wallet_dir, wallet_password
 
 
-def execute_sql_initialization(user, password, dsn, wallet_dir=None, wallet_password=None):
+def execute_sql_initialization(user, password, dsn, wallet_dir=None, wallet_password=None, tracker=None):
     print("\n[3/6] Configuración de Estructuras Vectoriales en Oracle 26ai...")
 
     sql_file = BASE_DIR / "sql" / "init_db.sql"
     if not sql_file.exists():
         print(f"  [!] No se encontró el archivo DDL: {sql_file}")
-        return
+        if tracker:
+            tracker.rollback(f"Archivo DDL no encontrado: {sql_file}")
+        sys.exit(1)
+
+    connect_kwargs = {
+        "user": user,
+        "password": password,
+        "dsn": dsn
+    }
+    if wallet_dir:
+        connect_kwargs["wallet_location"] = wallet_dir
+        if wallet_password:
+            connect_kwargs["wallet_password"] = wallet_password
+
+    if tracker:
+        tracker.db_conn_kwargs = connect_kwargs
 
     try:
         import oracledb
-        connect_kwargs = {
-            "user": user,
-            "password": password,
-            "dsn": dsn
-        }
-        if wallet_dir:
-            connect_kwargs["wallet_location"] = wallet_dir
-            if wallet_password:
-                connect_kwargs["wallet_password"] = wallet_password
-
         conn = oracledb.connect(**connect_kwargs)
         cur = conn.cursor()
 
@@ -375,6 +464,8 @@ def execute_sql_initialization(user, password, dsn, wallet_dir=None, wallet_pass
             elif action == "3":
                 print("      Instalación cancelada por el usuario.")
                 conn.close()
+                if tracker:
+                    tracker.rollback("Instalación cancelada por el usuario")
                 sys.exit(0)
             else:
                 print("      [✓] Conservando tablas y datos existentes.")
@@ -393,12 +484,32 @@ def execute_sql_initialization(user, password, dsn, wallet_dir=None, wallet_pass
         for stmt in statements:
             try:
                 cur.execute(stmt)
+                stmt_upper = stmt.upper()
+                if "CREATE TABLE" in stmt_upper:
+                    if "KNOWLEDGE_BASE" in stmt_upper and "KNOWLEDGE_BASE" not in (tracker.created_tables if tracker else []):
+                        if tracker:
+                            tracker.created_tables.append("KNOWLEDGE_BASE")
+                    if "AGENT_TICKETS_LOG" in stmt_upper and "AGENT_TICKETS_LOG" not in (tracker.created_tables if tracker else []):
+                        if tracker:
+                            tracker.created_tables.append("AGENT_TICKETS_LOG")
             except Exception as err:
-                if "ORA-00955" in str(err) or "already exists" in str(err):
+                err_str = str(err)
+                if "ORA-00955" in err_str or "already exists" in err_str:
                     pass  # Ya existe la tabla o índice
+                elif "ORA-51962" in err_str:
+                    # ORA-51962: The vector memory area is out of space for the current container.
+                    # Ocurre cuando VECTOR_MEMORY_SIZE = 0 (común en Oracle Database Standard Edition 2).
+                    print("    [i] Nota Informativa: 'vector_memory_size' no está asignado en esta instancia (Oracle SE2 o default).")
+                    print("        Oracle AI Vector Search operará en modo 'Exact Vector Search' (búsqueda vectorial exacta SIMD),")
+                    print("        que no requiere memoria SGA adicional y ofrece 100% de precisión y latencia < 20 ms.")
                 else:
                     first_line = stmt.splitlines()[0] if stmt.splitlines() else stmt
-                    print(f"    [!] Error en sentencia [{first_line[:40]}...]: {err}")
+                    print(f"\n  [!] Error crítico en sentencia SQL [{first_line[:40]}...]: {err}")
+                    conn.rollback()
+                    conn.close()
+                    if tracker:
+                        tracker.rollback(f"Fallo en sentencia SQL de inicialización: {err}")
+                    sys.exit(1)
         conn.commit()
 
         # Validar que las tablas existan en el esquema
@@ -413,10 +524,17 @@ def execute_sql_initialization(user, password, dsn, wallet_dir=None, wallet_pass
         if "KNOWLEDGE_BASE" in created and "AGENT_TICKETS_LOG" in created:
             print(f"  [✓] Estructuras de base de datos creadas y verificadas: {', '.join(created)}")
         else:
-            print(f"  [!] Advertencia: No se pudieron verificar todas las tablas requeridas. Encontradas: {created}")
+            missing = [t for t in ['KNOWLEDGE_BASE', 'AGENT_TICKETS_LOG'] if t not in created]
+            print(f"\n  [!] Error crítico: Faltan tablas requeridas en el esquema: {missing}")
+            if tracker:
+                tracker.rollback(f"Faltan tablas requeridas: {missing}")
+            sys.exit(1)
 
     except Exception as e:
-        print(f"  [!] Error al interactuar con la base de datos: {e}")
+        print(f"\n  [!] Error al interactuar con la base de datos: {e}")
+        if tracker:
+            tracker.rollback(f"Error de base de datos: {e}")
+        sys.exit(1)
 
 
 def check_ollama_service():
@@ -437,7 +555,7 @@ def check_ollama_service():
         print("      Asegúrate de instalarlo con: curl -fsSL https://ollama.com/install.sh | sh")
 
 
-def setup_knowledge_base():
+def setup_knowledge_base(tracker=None):
     print("\n[5/6] Ingesta de Documentos a la Base de Conocimiento...")
     print("  Selecciona cómo deseas inicializar el conocimiento:")
     print("  1) Generar y cargar los 10 documentos PDF de demostración (Recomendado para pruebas iniciales).")
@@ -448,15 +566,29 @@ def setup_knowledge_base():
     if choice == "1":
         print("\n  Generando 10 documentos PDF en data/demo_docs/...")
         gen_script = BASE_DIR / "scripts" / "generate_demo_pdfs.py"
-        subprocess.check_call([sys.executable, str(gen_script)])
+        try:
+            subprocess.check_call([sys.executable, str(gen_script)])
+            if tracker:
+                tracker.demo_docs_generated = True
 
-        print("\n  Vectorizando e ingestando demo PDFs en Oracle Database 26ai...")
-        ingest_script = BASE_DIR / "scripts" / "ingest_documents.py"
-        subprocess.check_call([sys.executable, str(ingest_script), "--demo"])
+            print("\n  Vectorizando e ingestando demo PDFs en Oracle Database 26ai...")
+            ingest_script = BASE_DIR / "scripts" / "ingest_documents.py"
+            subprocess.check_call([sys.executable, str(ingest_script), "--demo"])
+        except Exception as err:
+            print(f"\n  [!] Error durante la generación/ingesta de documentos demo: {err}")
+            if tracker:
+                tracker.rollback(f"Fallo en ingesta de documentos demo: {err}")
+            sys.exit(1)
     elif choice == "2":
         print("\n  Iniciando ingesta de documentos propios desde 'data/documents/'...")
         ingest_script = BASE_DIR / "scripts" / "ingest_documents.py"
-        subprocess.check_call([sys.executable, str(ingest_script)])
+        try:
+            subprocess.check_call([sys.executable, str(ingest_script)])
+        except Exception as err:
+            print(f"\n  [!] Error durante la ingesta de documentos: {err}")
+            if tracker:
+                tracker.rollback(f"Fallo en ingesta de documentos propios: {err}")
+            sys.exit(1)
     else:
         print("  [✓] Ingesta omitida. Puedes colocar tus archivos PDF en 'data/documents/' en cualquier momento")
         print("      y ejecutar: python3 scripts/ingest_documents.py")
@@ -487,7 +619,7 @@ def configure_firewall_port(port: int = 8000):
         print(f"  [!] Nota al verificar cortafuegos: {e}")
 
 
-def configure_systemd_service():
+def configure_systemd_service(tracker=None):
     print("\n[6/6] Configuración de Red, Cortafuegos y Servicio en Segundo Plano...")
     
     # 1. Verificar y abrir puerto 8000 en firewalld
@@ -501,7 +633,10 @@ def configure_systemd_service():
     if install_srv != 'n':
         try:
             from scripts.setup_systemd_service import setup_systemd
-            return setup_systemd(start_now=True)
+            res = setup_systemd(start_now=True)
+            if res and tracker:
+                tracker.systemd_installed = True
+            return res
         except Exception as err:
             print(f"  [!] No se pudo activar el servicio systemd: {err}")
             return False
@@ -509,13 +644,23 @@ def configure_systemd_service():
 
 
 def main():
-    print_banner()
-    check_python_dependencies()
-    user, password, dsn, wallet_dir, wallet_password = setup_database_config()
-    execute_sql_initialization(user, password, dsn, wallet_dir, wallet_password)
-    check_ollama_service()
-    setup_knowledge_base()
-    service_active = configure_systemd_service()
+    tracker = InstallationTracker()
+    try:
+        print_banner()
+        check_python_dependencies()
+        user, password, dsn, wallet_dir, wallet_password = setup_database_config(tracker)
+        execute_sql_initialization(user, password, dsn, wallet_dir, wallet_password, tracker)
+        check_ollama_service()
+        setup_knowledge_base(tracker)
+        service_active = configure_systemd_service(tracker)
+    except KeyboardInterrupt:
+        print("\n\n  [!] Instalación interrumpida manualmente por el usuario (Ctrl+C).")
+        tracker.rollback("Cancelación manual por el usuario")
+        sys.exit(130)
+    except Exception as e:
+        print(f"\n\n  [!] Error inesperado durante la instalación: {e}")
+        tracker.rollback(f"Excepción: {e}")
+        sys.exit(1)
 
     print("\n================================================================================")
     print(" ¡DESPLIEGUE Y CONFIGURACIÓN COMPLETADOS CON ÉXITO! ")

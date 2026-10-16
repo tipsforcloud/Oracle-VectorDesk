@@ -17,7 +17,8 @@ CREATE TABLE IF NOT EXISTS knowledge_base (
 );
 
 -- 2. Índice Vectorial HNSW (In-Memory Neighbor Graph) para búsqueda a escala
--- Nota: En Oracle 23ai se crea con DISTANCE COSINE para similitud semántica
+-- Requiere que 'vector_memory_size' > 0 esté configurado en el servidor (Enterprise Edition / SPFILE).
+-- En Oracle SE2 o configuraciones estándar, Oracle 26ai utiliza Exact Vector Search (SIMD nativo) automáticamente.
 CREATE VECTOR INDEX IF NOT EXISTS idx_knowledge_embedding 
 ON knowledge_base (embedding)
 ORGANIZATION INMEMORY NEIGHBOR GRAPH

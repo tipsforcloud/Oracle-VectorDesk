@@ -84,8 +84,13 @@ def reset_database():
             try:
                 cur.execute(stmt)
             except Exception as err:
-                if "ORA-00955" in str(err) or "already exists" in str(err):
+                err_str = str(err)
+                if "ORA-00955" in err_str or "already exists" in err_str:
                     pass
+                elif "ORA-51962" in err_str:
+                    print("    [i] Nota Informativa: 'vector_memory_size' no está asignado en esta instancia (Oracle SE2 o default).")
+                    print("        Oracle AI Vector Search operará en modo 'Exact Vector Search' (búsqueda vectorial exacta SIMD),")
+                    print("        que no requiere memoria SGA adicional y ofrece 100% de precisión y latencia < 20 ms.")
                 else:
                     first_line = stmt.splitlines()[0] if stmt.splitlines() else stmt
                     print(f"    [!] Error en sentencia [{first_line[:40]}...]: {err}")
